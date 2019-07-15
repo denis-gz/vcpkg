@@ -1,0 +1,12 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index 34c6192..307bbd2 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -437,7 +437,6 @@ list(TRANSFORM libtorrent_aux_include_files PREPEND "include/libtorrent/aux_/")
+ list(TRANSFORM libtorrent_kademlia_include_files PREPEND "include/libtorrent/kademlia/")
+ 
+ # these options control target creation and thus have to be declared before the add_library() call
+-feature_option(BUILD_SHARED_LIBS "build libtorrent as a shared library" ON)
+ feature_option(static_runtime "build libtorrent with static runtime" OFF)
+ 
+ find_public_dependency(Threads REQUIRED)
