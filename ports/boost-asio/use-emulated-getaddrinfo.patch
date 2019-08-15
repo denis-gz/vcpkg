@@ -1,0 +1,89 @@
+diff --git a/include/boost/asio/detail/config.hpp b/include/boost/asio/detail/config.hpp
+index 8fef292..092411e 100644
+--- a/include/boost/asio/detail/config.hpp
++++ b/include/boost/asio/detail/config.hpp
+@@ -1179,7 +1179,9 @@
+ # if !defined(BOOST_ASIO_DISABLE_GETADDRINFO)
+ #  if defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
+ #   if defined(_WIN32_WINNT) && (_WIN32_WINNT >= 0x0501)
+-#    define BOOST_ASIO_HAS_GETADDRINFO 1
++#    // Do not use WinSock getaddrinfo() since it fails to work without default
++#    // gateway (in some proxy scenarios, with static routes to DNS servers).
++#    //define BOOST_ASIO_HAS_GETADDRINFO 1
+ #   elif defined(UNDER_CE)
+ #    define BOOST_ASIO_HAS_GETADDRINFO 1
+ #   endif // defined(UNDER_CE)
+diff --git a/include/boost/asio/detail/impl/socket_ops.ipp b/include/boost/asio/detail/impl/socket_ops.ipp
+index d2cd468..b11c5c6 100644
+--- a/include/boost/asio/detail/impl/socket_ops.ipp
++++ b/include/boost/asio/detail/impl/socket_ops.ipp
+@@ -3324,21 +3324,9 @@ boost::system::error_code getaddrinfo(const char* host,
+   clear_last_error();
+ #if defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
+ # if defined(BOOST_ASIO_HAS_GETADDRINFO)
+-  // Building for Windows XP, Windows Server 2003, or later.
+   int error = ::getaddrinfo(host, service, &hints, result);
+   return ec = translate_addrinfo_error(error);
+ # else
+-  // Building for Windows 2000 or earlier.
+-  typedef int (WSAAPI *gai_t)(const char*,
+-      const char*, const addrinfo_type*, addrinfo_type**);
+-  if (HMODULE winsock_module = ::GetModuleHandleA("ws2_32"))
+-  {
+-    if (gai_t gai = (gai_t)::GetProcAddress(winsock_module, "getaddrinfo"))
+-    {
+-      int error = gai(host, service, &hints, result);
+-      return ec = translate_addrinfo_error(error);
+-    }
+-  }
+   int error = getaddrinfo_emulation(host, service, &hints, result);
+   return ec = translate_addrinfo_error(error);
+ # endif
+@@ -3398,19 +3386,8 @@ void freeaddrinfo(addrinfo_type* ai)
+ {
+ #if defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
+ # if defined(BOOST_ASIO_HAS_GETADDRINFO)
+-  // Building for Windows XP, Windows Server 2003, or later.
+   ::freeaddrinfo(ai);
+ # else
+-  // Building for Windows 2000 or earlier.
+-  typedef int (WSAAPI *fai_t)(addrinfo_type*);
+-  if (HMODULE winsock_module = ::GetModuleHandleA("ws2_32"))
+-  {
+-    if (fai_t fai = (fai_t)::GetProcAddress(winsock_module, "freeaddrinfo"))
+-    {
+-      fai(ai);
+-      return;
+-    }
+-  }
+   freeaddrinfo_emulation(ai);
+ # endif
+ #elif !defined(BOOST_ASIO_HAS_GETADDRINFO)
+@@ -3426,27 +3403,12 @@ boost::system::error_code getnameinfo(const socket_addr_type* addr,
+ {
+ #if defined(BOOST_ASIO_WINDOWS) || defined(__CYGWIN__)
+ # if defined(BOOST_ASIO_HAS_GETADDRINFO)
+-  // Building for Windows XP, Windows Server 2003, or later.
+   clear_last_error();
+   int error = ::getnameinfo(addr, static_cast<socklen_t>(addrlen),
+       host, static_cast<DWORD>(hostlen),
+       serv, static_cast<DWORD>(servlen), flags);
+   return ec = translate_addrinfo_error(error);
+ # else
+-  // Building for Windows 2000 or earlier.
+-  typedef int (WSAAPI *gni_t)(const socket_addr_type*,
+-      int, char*, DWORD, char*, DWORD, int);
+-  if (HMODULE winsock_module = ::GetModuleHandleA("ws2_32"))
+-  {
+-    if (gni_t gni = (gni_t)::GetProcAddress(winsock_module, "getnameinfo"))
+-    {
+-      clear_last_error();
+-      int error = gni(addr, static_cast<int>(addrlen),
+-          host, static_cast<DWORD>(hostlen),
+-          serv, static_cast<DWORD>(servlen), flags);
+-      return ec = translate_addrinfo_error(error);
+-    }
+-  }
+   clear_last_error();
+   return getnameinfo_emulation(addr, addrlen,
+       host, hostlen, serv, servlen, flags, ec);
