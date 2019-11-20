@@ -12,7 +12,7 @@ find_package(unofficial-iconv REQUIRED)
 
 file(GLOB SOURCES *.c)
 list(FILTER SOURCES EXCLUDE REGEX "/(run|test|trio)[^/]*$")
-list(FILTER SOURCES EXCLUDE REGEX "xml(lint|catalog).c$")
+list(FILTER SOURCES EXCLUDE REGEX "xml(catalog).c$")
 list(FILTER SOURCES EXCLUDE REGEX "rngparser\.c$")
 
 # Generate xmlexports with fixed definition of LIBXML_STATIC
@@ -137,12 +137,16 @@ if(NOT BUILD_SHARED_LIBS)
     target_compile_definitions(libxml2 PRIVATE -DLIBXML_STATIC)
 endif()
 
+add_executable(xmllint xmllint.c)
+target_include_directories(xmllint PRIVATE ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_BINARY_DIR}/include include ${LIBLZMA_INCLUDE_DIRS})
+target_link_libraries(xmllint libxml2)
+
 set(TARGET_INSTALL_OPTIONS)
 if(INSTALL_HEADERS)
     set(TARGET_INSTALL_OPTIONS PUBLIC_HEADER DESTINATION include/libxml)
 endif()
 
-install(TARGETS libxml2
+install(TARGETS libxml2 xmllint
     RUNTIME DESTINATION bin
     LIBRARY DESTINATION lib
     ARCHIVE DESTINATION lib
