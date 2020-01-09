@@ -1,0 +1,165 @@
+diff --git a/CMakeLists.txt b/CMakeLists.txt
+index abe12e0..97fdda4 100644
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -19,12 +19,12 @@ set (CMAKE_POSITION_INDEPENDENT_CODE ON)
+ 
+ enable_language (CXX)
+ if (MSVC)
+-  #set (CMAKE_CXX_STANDARD 14)
++  set (CMAKE_CXX_STANDARD 17)
+   if (CMAKE_VS_PLATFORM_NAME MATCHES "ARM")
+     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+   endif ()
+ else ()
+-  set (CMAKE_CXX_STANDARD 11)
++  set (CMAKE_CXX_STANDARD 17)
+ endif ()
+ set (CMAKE_CXX_STANDARD_REQUIRED ON)
+ set (CMAKE_CXX_EXTENSIONS ON)
+diff --git a/include/log4cplus/fileappender.h b/include/log4cplus/fileappender.h
+index 36f6d35..99d07fb 100644
+--- a/include/log4cplus/fileappender.h
++++ b/include/log4cplus/fileappender.h
+@@ -238,6 +238,12 @@ namespace log4cplus
+      * files; e.g. how many <tt>log.1</tt>, <tt>log.2</tt> etc. files
+      * will be kept.</dd>
+      * </dl>
++     *
++     * <dt><tt>BackupFolder</tt></dt>
++     * <dd>This property contains path to a folder where backup files
++     * are moved to when backup index limit is reached (default is
++     * empty, don't keep files).</dd>
++     * </dl>
+      */
+     class LOG4CPLUS_EXPORT RollingFileAppender : public FileAppender {
+     public:
+@@ -246,7 +252,8 @@ namespace log4cplus
+                             long maxFileSize = 10*1024*1024, // 10 MB
+                             int maxBackupIndex = 1,
+                             bool immediateFlush = true,
+-                            bool createDirs = false);
++                            bool createDirs = false,
++                            const log4cplus::tstring& backupFolder = LOG4CPLUS_TEXT(""));
+         RollingFileAppender(const log4cplus::helpers::Properties& properties);
+ 
+       // Dtor
+@@ -258,7 +265,9 @@ namespace log4cplus
+ 
+       // Data
+         long maxFileSize;
+-        int maxBackupIndex;
++        unsigned int maxBackupIndex;
++        unsigned int nextBackupIndex;
++		    log4cplus::tstring backupFolder;
+ 
+     private:
+         LOG4CPLUS_PRIVATE void init(long maxFileSize, int maxBackupIndex);
+diff --git a/src/fileappender.cxx b/src/fileappender.cxx
+index 1fdf2d0..c8a8d22 100644
+--- a/src/fileappender.cxx
++++ b/src/fileappender.cxx
+@@ -36,6 +36,7 @@
+ #include <cstdio>
+ #include <stdexcept>
+ #include <cmath> // std::fmod
++#include <filesystem>
+ 
+ // For _wrename() and _wremove() on Windows.
+ #include <stdio.h>
+@@ -44,6 +45,11 @@
+ #include <errno.h>
+ #endif
+ 
++#if defined (_WIN32)
++#include <tchar.h>
++#endif
++
++namespace fs = std::filesystem;
+ 
+ namespace log4cplus
+ {
+@@ -150,14 +156,32 @@ loglog_opening_result (helpers::LogLog & loglog,
+ 
+ static
+ void
+-rolloverFiles(const tstring& filename, unsigned int maxBackupIndex)
++rolloverFiles(const tstring& filename, unsigned int maxBackupIndex, unsigned int* pNextBackupIndex = nullptr, const tstring& backupFolder = LOG4CPLUS_TEXT(""))
+ {
+     helpers::LogLog * loglog = helpers::LogLog::getLogLog();
+ 
++    long ret;
++
+     // Delete the oldest file
+     tostringstream buffer;
+     buffer << filename << LOG4CPLUS_TEXT(".") << maxBackupIndex;
+-    long ret = file_remove (buffer.str ());
++
++    if (!backupFolder.empty()) {
++        tostringstream backupBuf;
++        backupBuf << filename;
++        if (pNextBackupIndex) {
++            unsigned int& nextBackupIndex = *pNextBackupIndex;
++            backupBuf << LOG4CPLUS_TEXT(".") << nextBackupIndex++;
++        }
++        fs::path backupFilenamePath = backupBuf.str();
++        fs::path backupPath = backupFolder / backupFilenamePath.filename();
++        std::error_code error;
++        fs::rename(filename, backupPath, error);
++        ret = error.value();
++    }
++    else {
++        ret = file_remove(buffer.str());
++    }
+ 
+     tostringstream source_oss;
+     tostringstream target_oss;
+@@ -461,9 +485,11 @@ FileAppender::init()
+ 
+ RollingFileAppender::RollingFileAppender(const tstring& filename_,
+     long maxFileSize_, int maxBackupIndex_, bool immediateFlush_,
+-    bool createDirs_)
++    bool createDirs_, const tstring& backupFolder_)
+     : FileAppender(filename_, std::ios_base::app, immediateFlush_, createDirs_)
+ {
++    backupFolder = backupFolder_;
++
+     init(maxFileSize_, maxBackupIndex_);
+ }
+ 
+@@ -492,6 +518,7 @@ RollingFileAppender::RollingFileAppender(const Properties& properties)
+     }
+ 
+     properties.getInt (tmpMaxBackupIndex, LOG4CPLUS_TEXT("MaxBackupIndex"));
++    backupFolder = properties.getProperty (LOG4CPLUS_TEXT("BackupFolder"));
+ 
+     init(tmpMaxFileSize, tmpMaxBackupIndex);
+ }
+@@ -512,6 +539,18 @@ RollingFileAppender::init(long maxFileSize_, int maxBackupIndex_)
+ 
+     maxFileSize = maxFileSize_;
+     maxBackupIndex = (std::max)(maxBackupIndex_, 1);
++    nextBackupIndex = 0;
++
++    fs::path backupFolderPath = backupFolder;
++    if (createDirs)
++        internal::make_dirs(backupFolderPath / LOG4CPLUS_TEXT("."));
++
++    for (const auto& f: fs::directory_iterator(backupFolderPath)) {
++	      unsigned int i = _ttoi(f.path().extension().c_str() + 1);
++        if (nextBackupIndex < i)
++            nextBackupIndex = i;
++    }
++    ++nextBackupIndex;
+ }
+ 
+ 
+@@ -594,7 +633,7 @@ RollingFileAppender::rollover(bool alreadyLocked)
+     // If maxBackups <= 0, then there is no file renaming to be done.
+     if (maxBackupIndex > 0)
+     {
+-        rolloverFiles(filename, maxBackupIndex);
++        rolloverFiles(filename, maxBackupIndex, &nextBackupIndex, backupFolder);
+ 
+         // Rename fileName to fileName.1
+         tstring target = filename + LOG4CPLUS_TEXT(".1");
