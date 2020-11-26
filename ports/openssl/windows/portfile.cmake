@@ -11,10 +11,10 @@ vcpkg_add_to_path(PREPEND "${NASM_EXE_PATH}")
 
 vcpkg_find_acquire_program(JOM)
 
-set(OPENSSL_SHARED no-shared)
-if(VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
+#set(OPENSSL_SHARED no-shared)
+#if(VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
     set(OPENSSL_SHARED shared)
-endif()
+#endif()
 
 set(CONFIGURE_OPTIONS 
     enable-static-engine
