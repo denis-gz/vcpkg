@@ -1,8 +1,8 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO emweb/wt
-    REF 9c6b7807b4fdaefe659ff9ab8ff4ba3937e62b2f # 4.4.0
-    SHA512 d9947180bb82750f9fa81212d343e8a719e6085e4c41327fd178ce0f93c5ef0f5a11e64d066871ac339abc973081cbd9580042fb8625f3cf3738a722439ba1e3
+    REF d0e9f2e8096a1acb4558130a851812dd424d8f3e # 4.7.1
+    SHA512 ddda642e464a0c93017161404911cd8261e105971162171cd6aa0e4334e22b5f284a753e8b81a4f43c9269b14389abd28c61e2cdfe706b414808e82fc4bc1680
     HEAD_REF master
     PATCHES
         0002-link-glew.patch
@@ -12,12 +12,15 @@ vcpkg_from_github(
 
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" SHARED_LIBS)
 
-vcpkg_check_features(OUT_FEATURE_OPTIONS FEATURE_OPTIONS
-    dbo        ENABLE_LIBWTDBO
-    postgresql ENABLE_POSTGRES
-    sqlite3    ENABLE_SQLITE
-    sqlserver  ENABLE_MSSQLSERVER
-    openssl    ENABLE_SSL
+vcpkg_check_features(
+    OUT_FEATURE_OPTIONS
+    FEATURE_OPTIONS
+    FEATURES
+        dbo        ENABLE_LIBWTDBO
+        postgresql ENABLE_POSTGRES
+        sqlite3    ENABLE_SQLITE
+        sqlserver  ENABLE_MSSQLSERVER
+        openssl    ENABLE_SSL
 )
 
 if(VCPKG_TARGET_IS_WINDOWS)
@@ -40,9 +43,9 @@ else()
     endif()
 endif()
 
-vcpkg_configure_cmake(
-    SOURCE_PATH ${SOURCE_PATH}
-    PREFER_NINJA
+vcpkg_cmake_configure(
+    SOURCE_PATH "${SOURCE_PATH}"
+    GENERATOR Ninja
     OPTIONS
         -DINSTALL_CONFIG_FILE_PATH="${DOWNLOADS}/wt"
         -DSHARED_LIBS=${SHARED_LIBS}
@@ -50,6 +53,9 @@ vcpkg_configure_cmake(
         -DDISABLE_BOOST_AUTOLINK=ON
         -DBUILD_EXAMPLES=OFF
         -DBUILD_TESTS=OFF
+
+        -DWTHTTP_CONFIGURATION=
+        -DCONFIGURATION=
 
         -DCONNECTOR_HTTP=ON
         -DENABLE_HARU=ON
@@ -68,16 +74,22 @@ vcpkg_configure_cmake(
         -DUSE_SYSTEM_GLEW=ON
 
         -DCMAKE_INSTALL_DIR=share
+        # see https://redmine.webtoolkit.eu/issues/9646
+        -DWTHTTP_CONFIGURATION=
+        -DCONFIGURATION=
+
 )
 
-vcpkg_install_cmake()
-vcpkg_fixup_cmake_targets()
+vcpkg_cmake_install()
+vcpkg_cmake_config_fixup()
 
 # There is no way to suppress installation of the headers and resource files in debug build.
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include ${CURRENT_PACKAGES_DIR}/debug/share)
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" "${CURRENT_PACKAGES_DIR}/debug/share")
 
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/var)
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/var)
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/var" "${CURRENT_PACKAGES_DIR}/debug/var")
 
-file(INSTALL ${SOURCE_PATH}/LICENSE DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+# RUNDIR is only used for wtfcgi what we don't build. See https://redmine.webtoolkit.eu/issues/9646
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/include/Wt/WConfig.h" "#define RUNDIR \"${CURRENT_PACKAGES_DIR}/var/run/wt\"" "")
+
+file(INSTALL "${SOURCE_PATH}/LICENSE" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)
 vcpkg_copy_pdbs()

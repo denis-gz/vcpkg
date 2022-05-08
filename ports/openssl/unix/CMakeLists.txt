@@ -25,7 +25,11 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "iOS")
     # disable that makes linkage error (e.g. require stderr usage)
     list(APPEND DISABLES no-stdio no-ui no-asm)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    set(PLATFORM darwin64-x86_64-cc)
+    if(VCPKG_TARGET_ARCHITECTURE MATCHES "arm64")
+        set(PLATFORM darwin64-arm64-cc)
+    else()
+        set(PLATFORM darwin64-x86_64-cc)
+    endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "FreeBSD")
     set(PLATFORM BSD-generic64)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "OpenBSD")
@@ -36,6 +40,9 @@ elseif(MINGW)
     else()
         set(PLATFORM mingw)
     endif()
+elseif(EMSCRIPTEN)
+    set(MAKE $ENV{EMSDK}/upstream/emscripten/emmake)
+    set(ENV{MAKE} $ENV{EMSDK}/upstream/emscripten/emmake)
 else()
     message(FATAL_ERROR "Unknown platform")
 endif()
@@ -46,14 +53,17 @@ message("CMAKE_C_COMPILER=${CMAKE_C_COMPILER}")
 message("COMPILER_ROOT=${COMPILER_ROOT}")
 message("CMAKE_SYSROOT=${CMAKE_SYSROOT}")
 message("CMAKE_OSX_SYSROOT=${CMAKE_OSX_SYSROOT}")
+message("CMAKE_OSX_DEPLOYMENT_TARGET=${CMAKE_OSX_DEPLOYMENT_TARGET}")
 message("CMAKE_C_FLAGS=${CMAKE_C_FLAGS}")
 message("CMAKE_C_FLAGS_RELEASE=${CMAKE_C_FLAGS_RELEASE}")
 message("CMAKE_C_FLAGS_DEBUG=${CMAKE_C_FLAGS_DEBUG}")
 message("CMAKE_INCLUDE_SYSTEM_FLAG_C=${CMAKE_INCLUDE_SYSTEM_FLAG_C}")
+message("CMAKE_C_OSX_DEPLOYMENT_TARGET_FLAG=${CMAKE_C_OSX_DEPLOYMENT_TARGET_FLAG}")
 
-set(CFLAGS "${CMAKE_C_FLAGS}")
-if(CMAKE_CXX_COMPILER_ID STREQUAL "Clang")
-    set(CFLAGS "-Wno-error=unused-command-line-argument ${CMAKE_C_FLAGS}")
+string(TOUPPER "${CMAKE_BUILD_TYPE}" BUILD_TYPE)
+set(CFLAGS "${CMAKE_C_FLAGS} ${CMAKE_C_FLAGS_${BUILD_TYPE}}")
+if(CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    set(CFLAGS "${CFLAGS} -Wno-error=unused-command-line-argument")
 endif()
 if(CMAKE_C_COMPILER_TARGET AND CMAKE_C_COMPILE_OPTIONS_TARGET)
     set(CFLAGS "${CFLAGS} ${CMAKE_C_COMPILE_OPTIONS_TARGET}${CMAKE_C_COMPILER_TARGET}")
@@ -66,6 +76,11 @@ if(CMAKE_SYSROOT AND CMAKE_C_COMPILE_OPTIONS_SYSROOT)
 elseif(CMAKE_OSX_SYSROOT AND CMAKE_C_COMPILE_OPTIONS_SYSROOT)
     set(CFLAGS "${CFLAGS} ${CMAKE_C_COMPILE_OPTIONS_SYSROOT}${CMAKE_OSX_SYSROOT}")
 endif()
+if (CMAKE_OSX_DEPLOYMENT_TARGET AND CMAKE_C_OSX_DEPLOYMENT_TARGET_FLAG)
+  set(CFLAGS "${CFLAGS} ${CMAKE_C_OSX_DEPLOYMENT_TARGET_FLAG}${CMAKE_OSX_DEPLOYMENT_TARGET}")
+elseif((CMAKE_SYSTEM_NAME STREQUAL "Darwin") AND (VCPKG_TARGET_ARCHITECTURE MATCHES "arm64"))
+  set(CFLAGS "${CFLAGS} -mmacosx-version-min=11.0")
+endif()
 
 string(REGEX REPLACE "^ " "" CFLAGS "${CFLAGS}")
 
@@ -75,7 +90,10 @@ else()
     file(TO_NATIVE_PATH ENV_PATH "${COMPILER_ROOT}:$ENV{PATH}")
 endif()
 set(ENV{ANDROID_DEV} "${CMAKE_SYSROOT}/usr")
-set(ENV{CC} "${CMAKE_C_COMPILER}")
+
+if(NOT IOS)
+    set(ENV{CC} "${CMAKE_C_COMPILER}")
+endif()
 
 message("ENV{ANDROID_DEV}=$ENV{ANDROID_DEV}")
 
@@ -90,10 +108,11 @@ get_filename_component(MSYS_BIN_DIR "${MAKE}" DIRECTORY)
 
 if(BUILD_SHARED_LIBS)
     set(SHARED shared)
-    file(STRINGS "${BUILDDIR}/include/openssl/opensslv.h" SHLIB_VERSION
-        REGEX "^#[\t ]*define[\t ]+SHLIB_VERSION_NUMBER[\t ]+\".*\".*")
-    string(REGEX REPLACE "^.*SHLIB_VERSION_NUMBER[\t ]+\"([^\"]*)\".*$" "\\1"
+    file(STRINGS "${BUILDDIR}/VERSION.dat" SHLIB_VERSION
+        REGEX "^SHLIB_VERSION=.*")
+    string(REGEX REPLACE "^(SHLIB_VERSION=)(.*)$" "\\2"
         SHLIB_VERSION "${SHLIB_VERSION}")
+
     if(CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS")
         set(LIB_EXT dylib)
         set(LIB_EXTS ${SHLIB_VERSION}.${LIB_EXT})
@@ -111,9 +130,11 @@ else()
     set(SHARED no-shared)
     set(LIB_EXTS a)
 endif()
+set(INSTALL_PKG_CONFIGS "${BUILDDIR}/openssl.pc")
 foreach(lib ssl crypto)
     foreach(ext ${LIB_EXTS})
         list(APPEND INSTALL_LIBS "${BUILDDIR}/lib${lib}.${ext}")
+        list(APPEND INSTALL_PKG_CONFIGS "${BUILDDIR}/lib${lib}.pc")
     endforeach()
     foreach(ext ${BIN_EXTS})
     # This might be wrong for targets which don't follow this naming scheme, but I'm not aware of any
@@ -133,47 +154,122 @@ else()
     set(PATH_VAR ":$ENV{PATH}")
 endif()
 
+add_custom_command(
+        OUTPUT "${BUILDDIR}/Makefile"
+        COMMAND ${ENV_COMMAND} "PATH=${MSYS_BIN_DIR}${PATH_VAR}"
+        VERBATIM
+        WORKING_DIRECTORY "${BUILDDIR}"
+)
 
+if(NOT IOS)
+    add_custom_command(
+        OUTPUT "${BUILDDIR}/Makefile"
+        COMMAND ${ENV_COMMAND} CC=${CMAKE_C_COMPILER}
+        COMMAND ${ENV_COMMAND} AR=${CMAKE_AR}
+        COMMAND ${ENV_COMMAND} LD=${CMAKE_LINKER}
+        COMMAND ${ENV_COMMAND} RANLIB=${CMAKE_RANLIB}
+        COMMAND ${ENV_COMMAND} MAKE=${MAKE}
+        COMMAND ${ENV_COMMAND} MAKEDEPPROG=${CMAKE_C_COMPILER}
+        COMMAND ${ENV_COMMAND} WINDRES=${CMAKE_RC_COMPILER}
+        VERBATIM
+        APPEND
+    )
+    if(EMSCRIPTEN)
+        list(APPEND DISABLES
+                threads
+                no-engine
+                no-dso
+                no-asm
+                no-shared
+                no-sse2
+                no-srtp
+                )
+    else()
+        list(APPEND DISABLES
+                enable-static-engine
+                no-zlib
+                no-ssl2
+                no-idea
+                no-cast
+                no-seed
+                no-md2
+                no-tests)
+    endif()
+endif()
+
+if(EMSCRIPTEN)
+    add_custom_command(
+            OUTPUT "${BUILDDIR}/Makefile"
+            COMMAND "$ENV{EMSDK}/upstream/emscripten/emconfigure" ./config
+            ${SHARED}
+            ${DISABLES}
+            "--prefix=${CMAKE_INSTALL_PREFIX}"
+            "--openssldir=/etc/ssl"
+            "--cross-compile-prefix=\"/\""
+            VERBATIM
+            APPEND
+    )
+
+    add_custom_target(build_libs ALL
+            COMMAND ${ENV_COMMAND} "PATH=${MSYS_BIN_DIR}${PATH_VAR}"
+            COMMAND "${CMAKE_COMMAND}" -E touch "${BUILDDIR}/krb5.h"
+            COMMAND "${MAKE}" make build_libs
+            VERBATIM
+            WORKING_DIRECTORY "${BUILDDIR}"
+            DEPENDS "${BUILDDIR}/Makefile"
+            BYPRODUCTS ${INSTALL_LIBS}
+            )
+else()
+    add_custom_command(
+            OUTPUT "${BUILDDIR}/Makefile"
+            COMMAND "${PERL}" Configure
+            ${SHARED}
+            ${DISABLES}
+            ${PLATFORM}
+            "--prefix=${CMAKE_INSTALL_PREFIX}"
+            "--openssldir=/etc/ssl"
+            ${CFLAGS}
+            VERBATIM
+            APPEND
+    )
+
+    add_custom_target(build_libs ALL
+            COMMAND ${ENV_COMMAND} "PATH=${MSYS_BIN_DIR}${PATH_VAR}"
+            COMMAND "${CMAKE_COMMAND}" -E touch "${BUILDDIR}/krb5.h"
+            COMMAND "${MAKE}" -j ${VCPKG_CONCURRENCY} build_libs
+            VERBATIM
+            WORKING_DIRECTORY "${BUILDDIR}"
+            DEPENDS "${BUILDDIR}/Makefile"
+            BYPRODUCTS ${INSTALL_LIBS}
+            )
+endif()
 
 add_custom_command(
-    OUTPUT "${BUILDDIR}/Makefile"
-    COMMAND ${ENV_COMMAND} CC=${CMAKE_C_COMPILER}
-    COMMAND ${ENV_COMMAND} AR=${CMAKE_AR}
-    COMMAND ${ENV_COMMAND} LD=${CMAKE_LINKER}
-    COMMAND ${ENV_COMMAND} RANLIB=${CMAKE_RANLIB}
-    COMMAND ${ENV_COMMAND} MAKE=${MAKE}
-    COMMAND ${ENV_COMMAND} MAKEDEPPROG=${CMAKE_C_COMPILER}
-    COMMAND ${ENV_COMMAND} "PATH=${MSYS_BIN_DIR}${PATH_VAR}"
-    COMMAND "${PERL}" Configure
-        ${SHARED}
-        enable-static-engine
-        no-zlib
-        no-ssl2
-        no-idea
-        no-bf
-        no-cast
-        no-seed
-        no-md2
-        no-tests
-        ${DISABLES}
-        ${PLATFORM}
-        "--prefix=${CMAKE_INSTALL_PREFIX}"
-        "--openssldir=/etc/ssl"
-        ${CFLAGS}
-    COMMAND "${CMAKE_COMMAND}" "-DDIR=${BUILDDIR}" -P "${CMAKE_CURRENT_LIST_DIR}/remove-deps.cmake"
-    VERBATIM
-    WORKING_DIRECTORY "${BUILDDIR}"
+        OUTPUT "${BUILDDIR}/Makefile"
+        COMMAND "${CMAKE_COMMAND}" "-DDIR=${BUILDDIR}" -P "${CMAKE_CURRENT_LIST_DIR}/remove-deps.cmake"
+        VERBATIM
+        APPEND
 )
 
-add_custom_target(build_libs ALL
-    COMMAND ${ENV_COMMAND} "PATH=${MSYS_BIN_DIR}${PATH_VAR}"
-    COMMAND "${CMAKE_COMMAND}" -E touch "${BUILDDIR}/krb5.h"
-    COMMAND "${MAKE}" build_libs
-    VERBATIM
-    WORKING_DIRECTORY "${BUILDDIR}"
-    DEPENDS "${BUILDDIR}/Makefile"
-    BYPRODUCTS ${INSTALL_LIBS}
-)
+if((CMAKE_SYSTEM_NAME STREQUAL "Darwin" OR CMAKE_SYSTEM_NAME STREQUAL "iOS") AND BUILD_SHARED_LIBS)
+    if(DEFINED CMAKE_INSTALL_NAME_DIR)
+        set(ID_PREFIX "${CMAKE_INSTALL_NAME_DIR}")
+    else()
+        set(ID_PREFIX "@rpath")
+    endif()
+
+    add_custom_command(
+        TARGET build_libs
+        COMMAND /usr/bin/install_name_tool -id "${ID_PREFIX}/libssl.${SHLIB_VERSION}.dylib"
+                                               "${BUILDDIR}/libssl.${SHLIB_VERSION}.dylib"
+        COMMAND /usr/bin/install_name_tool -id "${ID_PREFIX}/libcrypto.${SHLIB_VERSION}.dylib"
+                                               "${BUILDDIR}/libcrypto.${SHLIB_VERSION}.dylib"
+        COMMAND /usr/bin/install_name_tool -change "${CMAKE_INSTALL_PREFIX}/lib/libcrypto.${SHLIB_VERSION}.dylib"
+                                                   "${ID_PREFIX}/libcrypto.${SHLIB_VERSION}.dylib"
+                                                   "${BUILDDIR}/libssl.${SHLIB_VERSION}.dylib"
+        VERBATIM
+    )
+endif()
 
 install(
     FILES ${INSTALL_LIBS}
@@ -182,4 +278,8 @@ install(
 install(
     FILES ${INSTALL_BINS}
     DESTINATION bin
+)
+install(
+    FILES ${INSTALL_PKG_CONFIGS}
+    DESTINATION lib/pkgconfig
 )

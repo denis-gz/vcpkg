@@ -1,29 +1,31 @@
-vcpkg_fail_port_install(ON_ARCH "arm" ON_TARGET "uwp")
 vcpkg_check_linkage(ONLY_STATIC_LIBRARY)
 
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO odygrd/quill
-    REF 5a4dbedd2e59249719f0053b86f521c2b8cfca83 # v1.5.2
-    SHA512 3328d13acf65364ee51fa954e279e854c867d542ec1dc6ce0ee1385fd53a9105009f56d8fa5ccd6e623dc19dba25e7b3ce0f4974756e9a461e77a05ce1a3aac2
+    REF v1.7.2
+    SHA512 ea9671cab8a4cf641c413933bd7fb4f3b1f823ca1b17260b3217b13aff22513b4939ff722d74beada1730d47dca70858835733418593ed2df8abf5c1dea0b202
     HEAD_REF master
 )
 
-# remove bundled fmt
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/quill/quill/include/quill/bundled/fmt)
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/quill/quill/src/bundled/fmt)
-
-vcpkg_configure_cmake(
+vcpkg_cmake_configure(
     SOURCE_PATH ${SOURCE_PATH}
-    PREFER_NINJA
     OPTIONS
-      -DQUILL_FMT_EXTERNAL=ON
+        -DQUILL_FMT_EXTERNAL=ON
 )
 
-vcpkg_install_cmake()
+vcpkg_cmake_install()
+vcpkg_cmake_config_fixup(CONFIG_PATH lib/cmake/quill)
 
-vcpkg_fixup_cmake_targets(CONFIG_PATH lib/cmake/quill)
+if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
+    file(RENAME "${CURRENT_PACKAGES_DIR}/debug/pkgconfig" "${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig")
+endif()
+if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
+    file(RENAME "${CURRENT_PACKAGES_DIR}/pkgconfig" "${CURRENT_PACKAGES_DIR}/lib/pkgconfig")
+endif()
+vcpkg_fixup_pkgconfig()
 
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
+vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/include/quill/TweakMe.h" "// #define QUILL_FMT_EXTERNAL" "#define QUILL_FMT_EXTERNAL")
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 
-file(INSTALL ${SOURCE_PATH}/LICENSE DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+file(INSTALL "${SOURCE_PATH}/LICENSE" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)

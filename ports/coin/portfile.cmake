@@ -1,5 +1,3 @@
-vcpkg_fail_port_install(ON_TARGET "UWP" ON_ARCH "arm" "arm64")
-
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO Coin3D/coin
@@ -11,11 +9,15 @@ vcpkg_from_github(
 )
 
 if(VCPKG_LIBRARY_LINKAGE STREQUAL static)
-    set(COIN_BUILD_MSVC_STATIC_RUNTIME ON)
     set(COIN_BUILD_SHARED_LIBS OFF)
 else()
-    set(COIN_BUILD_MSVC_STATIC_RUNTIME OFF)
     set(COIN_BUILD_SHARED_LIBS ON)
+endif()
+
+if(VCPKG_CRT_LINKAGE STREQUAL dynamic)
+    set(COIN_BUILD_MSVC_STATIC_RUNTIME OFF)
+elseif(VCPKG_CRT_LINKAGE STREQUAL static)
+    set(COIN_BUILD_MSVC_STATIC_RUNTIME ON)
 endif()
 
 vcpkg_configure_cmake(
@@ -41,3 +43,5 @@ endif()
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/share/Coin/profiler)
+
+vcpkg_fixup_pkgconfig()

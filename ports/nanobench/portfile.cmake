@@ -2,15 +2,20 @@
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO martinus/nanobench
-    REF c534992696b9341274c6714931d0064d74239fcb #v4.0.0
-    SHA512 09078f1100c6f843e7646b8aaab687c32e71ba2dc05a2a5b282c72ab064ceffbf4aeb5ad14c4a2bdbe2ea66dca9cd207dee5eade44f77844cddfa490b4c09c32
+    REF v4.3.7
+    SHA512 2f5b9573e220b507586c8586903489bd7dc2a8a09da07bd2454842a4c33c0323b0911ebeb902d5098c7dd9c96925d9bc3d4ca62fc5798f630b4b4d3e75d117a7
     HEAD_REF master
+    PATCHES
+        fix-cmakefile.patch
 )
 
-file(
-    COPY ${SOURCE_PATH}/src/include/nanobench.h
-    DESTINATION ${CURRENT_PACKAGES_DIR}/include
+vcpkg_cmake_configure(
+    SOURCE_PATH "${SOURCE_PATH}"
 )
+
+vcpkg_cmake_install()
+
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include")
 
 # Handle copyright
 file(INSTALL ${SOURCE_PATH}/LICENSE DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)

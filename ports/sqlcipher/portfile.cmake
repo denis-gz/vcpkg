@@ -1,12 +1,10 @@
 vcpkg_check_linkage(ONLY_DYNAMIC_LIBRARY)
 
-vcpkg_fail_port_install( ON_TARGET "UWP" "OSX" "Linux")
-
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO sqlcipher/sqlcipher
-    REF v4.4.0
-    SHA512 e6e7b09cc079d75ac0b9e15a256bfe479ce97cfdece3244ca53e2e04b7f1dc1afdc1ee76d07f2629e614c7532cc80eeef6b85ba5952d31a2eaed8d6e84414628
+    REF v4.5.1
+    SHA512 157ab90e1b80ae9ae85c68c6b77008fe8ab5b526cbb2604297a5ba54279286b4cac1fecd0db552e0113a75ff61a198f649611b8bde4dec5156c443e7b7fbe0c3
     HEAD_REF master
 )
 

@@ -1,29 +1,21 @@
 # vcpkg_execute_in_download_mode
 
+The latest version of this document lives in the [vcpkg repo](https://github.com/Microsoft/vcpkg/blob/master/docs/maintainers/vcpkg_execute_in_download_mode.md).
+
 Execute a process even in download mode.
 
 ## Usage
 ```cmake
 vcpkg_execute_in_download_mode(
-    COMMAND <cmd> [<arguments>...]
-    OUTPUT_QUIET ERROR_QUIET OUTPUT_STRIP_TRAILING_WHITESPACE ERROR_STRIP_TRAILING_WHITESPACE
-    WORKING_DIRECTORY <dir>
-    TIMEOUT <seconds>
-    RESULT_VARIABLE <seconds>
-    OUTPUT_VARIABLE <var_out>
-    ERROR_VARIABLE <var_err>
-    INPUT_FILE <f_in>
-    OUTPUT_FILE <f_out>
-    ERROR_FILE <f_err>
-    ENCODING <enc>
+    ...
 )
 ```
 
-The signature of this function is identical with `execute_process()` except that
-it only accepts one COMMAND argument, i.e., does not support chaining multiple
-commands with pipes.
+The signature of this function is identical to `execute_process()`.
 
-See `execute_process()` for a detailed description of the parameters.
+See [`execute_process()`] for more details.
+
+[`execute_process()`]: https://cmake.org/cmake/help/latest/command/execute_process.html
 
 ## Source
-[scripts/cmake/vcpkg_execute_in_download_mode.cmake](https://github.com/Microsoft/vcpkg/blob/master/scripts/cmake/vcpkg_execute_in_download_mode.cmake)
+[scripts/cmake/vcpkg\_execute\_in\_download\_mode.cmake](https://github.com/Microsoft/vcpkg/blob/master/scripts/cmake/vcpkg_execute_in_download_mode.cmake)

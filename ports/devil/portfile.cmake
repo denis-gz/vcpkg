@@ -10,6 +10,8 @@ vcpkg_from_github(
         0003_fix-openexr.patch
         enable-static.patch
         0004_compatible-jasper-2-0-20.patch
+        0005-fix-pkgconfig.patch
+        0006-fix-ilut-header.patch
 )
 
 file(REMOVE ${SOURCE_PATH}/DevIL/src-IL/cmake/FindOpenEXR.cmake)
@@ -38,6 +40,8 @@ vcpkg_configure_cmake(
 
 vcpkg_install_cmake()
 vcpkg_copy_pdbs()
+
+vcpkg_fixup_pkgconfig()
 
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include)
 

@@ -4,15 +4,16 @@ vcpkg_from_gitlab(
     GITLAB_URL https://gitlab.com
     OUT_SOURCE_PATH SOURCE_PATH
     REPO libeigen/eigen
-    REF 3.3.7
-    SHA512 4cc3717b9cbe78335e05f724919497214edd482d4812aeb1a9fd6da5b3f6d1b194bb93ed0dab9e734b4334a5b88e8f8c339c43c1b2044332286ef5e758f9ecf4
+    REF 3.4.0
+    SHA512 ba75ecb760e32acf4ceaf27115468e65d4f77c44f8d519b5a13e7940af2c03a304ad433368cb6d55431f307c5c39e2666ab41d34442db3cf441638e51f5c3b6a
     HEAD_REF master
-    PATCHES fix-cuda-error.patch # issue https://gitlab.com/libeigen/eigen/-/issues/1526
+    PATCHES
+        remove_configure_checks.patch # This removes unnecessary configure checks. Eigen3 just installs headers not anything more.
+        fix-vectorized-reductions-half.patch # Remove this patch in the next update
 )
 
-vcpkg_configure_cmake(
-    SOURCE_PATH ${SOURCE_PATH}
-    PREFER_NINJA
+vcpkg_cmake_configure(
+    SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
         -DBUILD_TESTING=OFF
         -DEIGEN_BUILD_PKGCONFIG=ON
@@ -24,13 +25,13 @@ vcpkg_configure_cmake(
         -DPKGCONFIG_INSTALL_DIR=${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig
 )
 
-vcpkg_install_cmake()
-vcpkg_fixup_cmake_targets()
+vcpkg_cmake_install()
+vcpkg_cmake_config_fixup()
 vcpkg_fixup_pkgconfig()
 
-file(GLOB INCLUDES ${CURRENT_PACKAGES_DIR}/include/eigen3/*)
+file(GLOB INCLUDES "${CURRENT_PACKAGES_DIR}/include/eigen3/*")
 # Copy the eigen header files to conventional location for user-wide MSBuild integration
-file(COPY ${INCLUDES} DESTINATION ${CURRENT_PACKAGES_DIR}/include)
-file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include ${CURRENT_PACKAGES_DIR}/debug/share)
+file(COPY ${INCLUDES} DESTINATION "${CURRENT_PACKAGES_DIR}/include")
+file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/debug/include" "${CURRENT_PACKAGES_DIR}/debug/share")
 
-file(INSTALL ${SOURCE_PATH}/COPYING.README DESTINATION ${CURRENT_PACKAGES_DIR}/share/${PORT} RENAME copyright)
+file(INSTALL "${SOURCE_PATH}/COPYING.README" DESTINATION "${CURRENT_PACKAGES_DIR}/share/${PORT}" RENAME copyright)

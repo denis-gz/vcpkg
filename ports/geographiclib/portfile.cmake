@@ -2,8 +2,8 @@ vcpkg_from_sourceforge (
     OUT_SOURCE_PATH SOURCE_PATH
     REPO geographiclib
     REF distrib
-    FILENAME "GeographicLib-1.50.1.tar.gz"
-    SHA512 1db874f30957a0edb8a1df3eee6db73cc993629e3005fe912e317a4ba908e7d7580ce483bb0054c4b46370b8edaec989609fb7e4eb6ba00c80182db43db436f1
+    FILENAME "GeographicLib-1.52.tar.gz"
+    SHA512 98a4d33764db4a4755851a7db639fd9e055dcf4f1f949258e112fce2e198076b5896fcae2c1ea36b37fe1000d28eec326636a730e70f25bc19a1610423ba6859
     PATCHES cxx-library-only.patch
 )
 
@@ -19,13 +19,6 @@ else ()
   set (LIB_TYPE "STATIC")
 endif ()
 
-if (tools IN_LIST FEATURES)
-  vcpkg_fail_port_install (
-    MESSAGE "Cannot build GeographicLib tools for UWP"
-    ON_TARGET uwp
-  )
-endif ()
-
 vcpkg_configure_cmake (
     SOURCE_PATH ${SOURCE_PATH}
     OPTIONS
@@ -38,13 +31,8 @@ vcpkg_install_cmake ()
 vcpkg_fixup_cmake_targets (CONFIG_PATH share/geographiclib)
 vcpkg_copy_pdbs ()
 
-file (GLOB TOOL_LIST LIST_DIRECTORIES false
-  ${CURRENT_PACKAGES_DIR}/tools/*)
-if (TOOL_LIST)
-  file (INSTALL ${TOOL_LIST}
-    DESTINATION "${CURRENT_PACKAGES_DIR}/tools/${PORT}")
+if (tools IN_LIST FEATURES)
   vcpkg_copy_tool_dependencies (${CURRENT_PACKAGES_DIR}/tools/${PORT})
-  file (REMOVE ${TOOL_LIST})
 endif ()
 
 file (REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/share)
@@ -57,3 +45,5 @@ file (INSTALL ${SOURCE_PATH}/LICENSE.txt
 # Install usage
 configure_file (${CMAKE_CURRENT_LIST_DIR}/usage
   ${CURRENT_PACKAGES_DIR}/share/${PORT}/usage @ONLY)
+
+vcpkg_fixup_pkgconfig()
