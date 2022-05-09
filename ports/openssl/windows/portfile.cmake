@@ -9,10 +9,10 @@ vcpkg_add_to_path(PREPEND "${NASM_EXE_PATH}")
 
 vcpkg_find_acquire_program(JOM)
 
-set(OPENSSL_SHARED no-shared)
-if(VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
+#set(OPENSSL_SHARED no-shared)
+#if(VCPKG_LIBRARY_LINKAGE STREQUAL dynamic)
     set(OPENSSL_SHARED shared)
-endif()
+#endif()
 
 set(CONFIGURE_OPTIONS
     enable-static-engine
@@ -22,6 +22,8 @@ set(CONFIGURE_OPTIONS
     -utf-8
     ${OPENSSL_SHARED}
 )
+
+set(OPENSSL_NO_AUTOLOAD_CONFIG 1)
 
 if(DEFINED OPENSSL_USE_NOPINSHARED)
     set(CONFIGURE_OPTIONS ${CONFIGURE_OPTIONS} no-pinshared)
@@ -65,7 +67,7 @@ if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
 
     message(STATUS "Configure ${TARGET_TRIPLET}-rel")
     vcpkg_execute_required_process(
-        COMMAND ${CONFIGURE_COMMAND} ${OPENSSL_ARCH} "--prefix=${OPENSSLDIR_RELEASE}" "--openssldir=${OPENSSLDIR_RELEASE}" -FS
+        COMMAND ${CONFIGURE_COMMAND} ${OPENSSL_ARCH} "--prefix=${OPENSSLDIR_RELEASE}" -FS
         WORKING_DIRECTORY ${SOURCE_PATH_RELEASE}
         LOGNAME configure-perl-${TARGET_TRIPLET}-rel
     )
@@ -104,7 +106,7 @@ if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
 
     message(STATUS "Configure ${TARGET_TRIPLET}-dbg")
     vcpkg_execute_required_process(
-        COMMAND ${CONFIGURE_COMMAND} debug-${OPENSSL_ARCH} "--prefix=${OPENSSLDIR_DEBUG}" "--openssldir=${OPENSSLDIR_DEBUG}" -FS
+        COMMAND ${CONFIGURE_COMMAND} debug-${OPENSSL_ARCH} "--prefix=${OPENSSLDIR_DEBUG}" -FS
         WORKING_DIRECTORY ${SOURCE_PATH_DEBUG}
         LOGNAME configure-perl-${TARGET_TRIPLET}-dbg
     )
@@ -147,7 +149,7 @@ file(REMOVE
 
 file(MAKE_DIRECTORY "${CURRENT_PACKAGES_DIR}/tools/openssl/")
 file(RENAME "${CURRENT_PACKAGES_DIR}/bin/openssl.exe" "${CURRENT_PACKAGES_DIR}/tools/openssl/openssl.exe")
-file(RENAME "${CURRENT_PACKAGES_DIR}/openssl.cnf" "${CURRENT_PACKAGES_DIR}/tools/openssl/openssl.cnf")
+#file(RENAME "${CURRENT_PACKAGES_DIR}/openssl.cnf" "${CURRENT_PACKAGES_DIR}/tools/openssl/openssl.cnf")
 
 vcpkg_copy_tool_dependencies("${CURRENT_PACKAGES_DIR}/tools/openssl")
 
