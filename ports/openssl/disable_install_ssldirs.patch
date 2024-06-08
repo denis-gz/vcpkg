@@ -1,0 +1,36 @@
+diff -ru a/Configurations/windows-makefile.tmpl b/Configurations/windows-makefile.tmpl
+--- a/Configurations/windows-makefile.tmpl	2023-09-11 17:08:11.000000000 +0300
++++ b/Configurations/windows-makefile.tmpl	2024-06-08 21:04:18.146624000 +0300
+@@ -354,7 +354,7 @@
+ 	@$(ECHO) "Tests are not supported with your chosen Configure options"
+ 	@{- output_on() if !$disabled{tests}; "\@rem" -}
+ 
+-install: install_sw install_ssldirs install_docs
++install: install_sw install_docs
+ 
+ uninstall: uninstall_docs uninstall_sw
+ 
+@@ -393,23 +393,6 @@
+ 
+ uninstall_docs: uninstall_html_docs
+ 
+-install_ssldirs:
+-	@"$(PERL)" "$(SRCDIR)\util\mkdir-p.pl" "$(OPENSSLDIR)\certs"
+-	@"$(PERL)" "$(SRCDIR)\util\mkdir-p.pl" "$(OPENSSLDIR)\private"
+-	@"$(PERL)" "$(SRCDIR)\util\mkdir-p.pl" "$(OPENSSLDIR)\misc"
+-	@"$(PERL)" "$(SRCDIR)\util\copy.pl" "$(SRCDIR)\apps\openssl.cnf" \
+-                                        "$(OPENSSLDIR)\openssl.cnf.dist"
+-	@IF NOT EXIST "$(OPENSSLDIR)\openssl.cnf" \
+-         "$(PERL)" "$(SRCDIR)\util\copy.pl" "$(SRCDIR)\apps\openssl.cnf" \
+-                                        "$(OPENSSLDIR)\openssl.cnf"
+-	@"$(PERL)" "$(SRCDIR)\util\copy.pl" $(MISC_SCRIPTS) \
+-                                        "$(OPENSSLDIR)\misc"
+-	@"$(PERL)" "$(SRCDIR)\util\copy.pl" "$(SRCDIR)\apps\ct_log_list.cnf" \
+-                                        "$(OPENSSLDIR)\ct_log_list.cnf.dist"
+-	@IF NOT EXIST "$(OPENSSLDIR)\ct_log_list.cnf" \
+-         "$(PERL)" "$(SRCDIR)\util\copy.pl" "$(SRCDIR)\apps\ct_log_list.cnf" \
+-                                        "$(OPENSSLDIR)\ct_log_list.cnf"
+-
+ install_dev: install_runtime_libs
+ 	@if "$(INSTALLTOP)"=="" ( $(ECHO) "INSTALLTOP should not be empty" & exit 1 )
+ 	@$(ECHO) "*** Installing development files"
