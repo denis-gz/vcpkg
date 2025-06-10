@@ -65,9 +65,12 @@ if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "release")
 
     set(OPENSSLDIR_RELEASE ${CURRENT_PACKAGES_DIR})
 
+    set(ENV{LDFLAGS} "/DEBUG /PDBALTPATH:%_PDB%")
+
     message(STATUS "Configure ${TARGET_TRIPLET}-rel")
     vcpkg_execute_required_process(
         COMMAND ${CONFIGURE_COMMAND} ${OPENSSL_ARCH} "--prefix=${OPENSSLDIR_RELEASE}" -FS
+
         WORKING_DIRECTORY ${SOURCE_PATH_RELEASE}
         LOGNAME configure-perl-${TARGET_TRIPLET}-rel
     )
@@ -103,6 +106,8 @@ if(NOT DEFINED VCPKG_BUILD_TYPE OR VCPKG_BUILD_TYPE STREQUAL "debug")
     set(SOURCE_PATH_DEBUG "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-dbg")
 
     set(OPENSSLDIR_DEBUG ${CURRENT_PACKAGES_DIR}/debug)
+
+    set(ENV{LDFLAGS} "/DEBUG /PDBALTPATH:%_PDB%")
 
     message(STATUS "Configure ${TARGET_TRIPLET}-dbg")
     vcpkg_execute_required_process(

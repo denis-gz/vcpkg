@@ -135,11 +135,14 @@ index 1fdf2d0..c8a8d22 100644
  
      init(tmpMaxFileSize, tmpMaxBackupIndex);
  }
-@@ -512,6 +539,18 @@ RollingFileAppender::init(long maxFileSize_, int maxBackupIndex_)
+@@ -512,6 +539,21 @@ RollingFileAppender::init(long maxFileSize_, int maxBackupIndex_)
  
      maxFileSize = maxFileSize_;
      maxBackupIndex = (std::max)(maxBackupIndex_, 1);
 +    nextBackupIndex = 0;
++
++    if (backupFolder.empty())
++        return;
 +
 +    fs::path backupFolderPath = backupFolder;
 +    if (createDirs)
@@ -154,7 +157,7 @@ index 1fdf2d0..c8a8d22 100644
  }
  
  
-@@ -594,7 +633,7 @@ RollingFileAppender::rollover(bool alreadyLocked)
+@@ -597,7 +636,7 @@ RollingFileAppender::rollover(bool alreadyLocked)
      // If maxBackups <= 0, then there is no file renaming to be done.
      if (maxBackupIndex > 0)
      {

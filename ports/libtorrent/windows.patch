@@ -1,0 +1,43 @@
+--- a/CMakeLists.txt
++++ b/CMakeLists.txt
+@@ -1,7 +1,8 @@
+-cmake_minimum_required(VERSION 3.16.0 FATAL_ERROR) # Configurable policies: <= CMP0097
++cmake_minimum_required(VERSION 3.25.0 FATAL_ERROR)
+ 
+ cmake_policy(SET CMP0091 NEW)
+ cmake_policy(SET CMP0092 NEW)
++cmake_policy(SET CMP0141 NEW)
+ 
+ list(APPEND CMAKE_MODULE_PATH ${CMAKE_CURRENT_SOURCE_DIR}/cmake/Modules)
+ include(LibtorrentMacros)
+@@ -13,6 +14,7 @@
+ 	VERSION ${VER_MAJOR}.${VER_MINOR}.${VER_TINY}
+ )
+ set (SOVERSION "10")
++set (CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "Embedded")
+ 
+ include(GNUInstallDirs)
+ include(GeneratePkgConfig)
+@@ -503,7 +505,7 @@
+ 
+ if (NOT BUILD_SHARED_LIBS)
+ 	set(Boost_USE_STATIC_LIBS ON)
+-	set(OPENSSL_USE_STATIC_LIBS ON)
++	set(OPENSSL_USE_STATIC_LIBS OFF)
+ endif()
+ 
+ add_library(torrent-rasterbar
+@@ -622,8 +622,12 @@
+ 				/Zc:__cplusplus
+ 				/MP # for multi-core compilation
+ 				/bigobj # increase the number of sections for obj files
++				$<$<NOT:$<CONFIG:Debug>>:/GL> # /LTCG counterpart
++		)
++		target_link_options(torrent-rasterbar
++			PRIVATE
++				$<$<NOT:$<CONFIG:Debug>>:/LTCG /OPT:ICF=5 /OPT:REF>
+ 		)
+-		set_target_properties(torrent-rasterbar PROPERTIES LINK_FLAGS_RELEASE "/OPT:ICF=5 /OPT:REF")
+ 	endif()
+ endif()
+ 

@@ -6,6 +6,7 @@ vcpkg_from_github(
     HEAD_REF master
     PATCHES
         backup-folder.patch
+        msvc-options.patch
 )
 
 vcpkg_from_github(
@@ -31,13 +32,15 @@ vcpkg_check_features(
         unicode UNICODE
 )
 
+set(VCPKG_LIBRARY_LINKAGE dynamic)
+
 vcpkg_cmake_configure(
     SOURCE_PATH "${SOURCE_PATH}"
     OPTIONS
-        -DLOG4CPLUS_BUILD_TESTING=OFF
+        -DLOG4CPLUS_BUILD_TESTING=ON
         -DLOG4CPLUS_BUILD_LOGGINGSERVER=OFF
-        -DWITH_UNIT_TESTS=OFF
-        -DLOG4CPLUS_ENABLE_DECORATED_LIBRARY_NAME=OFF
+        -DWITH_UNIT_TESTS=ON
+        -DLOG4CPLUS_ENABLE_DECORATED_LIBRARY_NAME=ON
         ${FEATURE_OPTIONS}
 )
 

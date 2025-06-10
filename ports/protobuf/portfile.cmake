@@ -9,7 +9,6 @@ vcpkg_from_github(
         fix-default-proto-file-path.patch
 )
 
-string(COMPARE EQUAL "${TARGET_TRIPLET}" "${HOST_TRIPLET}" protobuf_BUILD_PROTOC_BINARIES)
 string(COMPARE EQUAL "${VCPKG_LIBRARY_LINKAGE}" "dynamic" protobuf_BUILD_SHARED_LIBS)
 string(COMPARE EQUAL "${VCPKG_CRT_LINKAGE}" "static" protobuf_MSVC_STATIC_RUNTIME)
 
@@ -37,7 +36,7 @@ vcpkg_cmake_configure(
         -Dprotobuf_MSVC_STATIC_RUNTIME=${protobuf_MSVC_STATIC_RUNTIME}
         -Dprotobuf_BUILD_TESTS=OFF
         -DCMAKE_INSTALL_CMAKEDIR:STRING=share/protobuf
-        -Dprotobuf_BUILD_PROTOC_BINARIES=${protobuf_BUILD_PROTOC_BINARIES}
+        -Dprotobuf_BUILD_PROTOC_BINARIES=ON
         -Dprotobuf_BUILD_LIBPROTOC=${protobuf_BUILD_LIBPROTOC}
         ${FEATURE_OPTIONS}
 )

@@ -1,0 +1,45 @@
+diff -ru b/CMakeLists.txt c/CMakeLists.txt
+--- b/CMakeLists.txt
++++ c/CMakeLists.txt
+@@ -1,3 +1,5 @@
++cmake_minimum_required (VERSION 3.25)
++
+ # This block needs to stay before the project (log4cplus) line so that
+ #  the output files placed into Android's libs directory.
+ if (CMAKE_TOOLCHAIN_FILE)
+@@ -12,7 +14,6 @@
+ set (CMAKE_LEGACY_CYGWIN_WIN32 0)
+ 
+ project (log4cplus)
+-cmake_minimum_required (VERSION 3.12)
+ 
+ # Use "-fPIC" / "-fPIE" for all targets by default, including static libs.
+ set (CMAKE_POSITION_INDEPENDENT_CODE ON)
+@@ -23,6 +24,18 @@
+   if (CMAKE_VS_PLATFORM_NAME MATCHES "ARM")
+     set (CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} /EHsc")
+   endif ()
++  add_compile_definitions(_SILENCE_CXX17_CODECVT_HEADER_DEPRECATION_WARNING)
++  add_compile_options (
++    $<$<NOT:$<CONFIG:Debug>>:/GL>
++  )
++  add_link_options (/DEBUG
++    $<$<NOT:$<CONFIG:Debug>>:/LTCG>
++    $<$<NOT:$<CONFIG:Debug>>:/OPT:REF>
++    $<$<NOT:$<CONFIG:Debug>>:/OPT:ICF>
++  )
++  if (${BUILD_SHARED_LIBS})
++    add_link_options (/PDBALTPATH:%_PDB%)
++  endif ()
+ else ()
+   set (CMAKE_CXX_STANDARD 17)
+ endif ()
+@@ -109,6 +122,8 @@
+ 
+ option(WITH_UNIT_TESTS "Enable unit tests" ON)
+ if (WITH_UNIT_TESTS)
++  find_package(Catch2 2 REQUIRED CONFIG)
++  include_directories("${PACKAGE_PREFIX_DIR}/include")
+   set (LOG4CPLUS_WITH_UNIT_TESTS 1)
+   add_compile_definitions (CATCH_CONFIG_PREFIX_ALL=1)
+   if (WIN32)

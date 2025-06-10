@@ -35,6 +35,8 @@ vcpkg_from_github(
     REF be310d3510d2d7b8178d348da30d9a744f0ad7e7 # v1.2.16-be310d35
     SHA512 7057962ad0cef4fd454f8be00c032c59dc807a58ebcedadea3f030fa7a5719e116eadc9106c69cc5c569627e70418a030a1ec0210fb1ad3abb8a854cdf261d08
     HEAD_REF RC_1_2
+    PATCHES
+		windows.patch
 )
 
 vcpkg_configure_cmake(
