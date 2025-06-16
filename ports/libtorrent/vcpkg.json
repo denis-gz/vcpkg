@@ -1,11 +1,12 @@
 {
   "name": "libtorrent",
-  "version": "1.2.16-be310d35",
+  "version": "2.0.11-ef64db35",
   "maintainers": "Arvid Norberg <arvid.norberg@gmail.com>",
   "description": "An efficient feature complete C++ BitTorrent implementation",
   "homepage": "https://libtorrent.org",
   "documentation": "https://libtorrent.org/reference.html",
-  "supports": "!uwp & !(windows & arm)",
+  "license": "BSD-2-Clause",
+  "supports": "!uwp",
   "dependencies": [
     "boost-asio",
     "boost-chrono",
@@ -13,6 +14,8 @@
     "boost-crc",
     "boost-date-time",
     "boost-iterator",
+    "boost-logic",
+    "boost-multi-index",
     "boost-multiprecision",
     "boost-pool",
     "boost-random",
@@ -22,7 +25,6 @@
     "openssl"
   ],
   "default-features": [
-    "iconv"
   ],
   "features": {
     "deprfun": {

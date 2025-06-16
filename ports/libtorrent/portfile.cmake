@@ -13,7 +13,6 @@ vcpkg_check_features(
     FEATURES
         deprfun     deprecated-functions
         examples    build_examples
-        iconv       iconv
         python      python-bindings
         test        build_tests
         tools       build_tools
@@ -32,12 +31,40 @@ endif()
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO arvidn/libtorrent
-    REF be310d3510d2d7b8178d348da30d9a744f0ad7e7 # v1.2.16-be310d35
-    SHA512 7057962ad0cef4fd454f8be00c032c59dc807a58ebcedadea3f030fa7a5719e116eadc9106c69cc5c569627e70418a030a1ec0210fb1ad3abb8a854cdf261d08
-    HEAD_REF RC_1_2
+    REF ef64db357de11dc8a53f9e95d7685f545619211b # v2.0.11-ef64db35
+    SHA512 c22b514b233454a1934b830bb5eea1ba7992699651aedeed6204777d515cc5dec5d2895569cec4210be473c3a5a0ee8941771fdeff50381e1d920020c1a05f32
+    HEAD_REF RC_2_0
     PATCHES
 		windows.patch
 )
+
+vcpkg_from_github(
+        OUT_SOURCE_PATH TRYSIGNAL_SOURCE_PATH
+        REPO arvidn/try_signal
+        REF 105cce59972f925a33aa6b1c3109e4cd3caf583d #2022-10-27
+        SHA512 4a0090755831e0e4a1930817345fa5934144421d9a9d710fe8ed3712233fa2fa037fc0e0d4f88b7cc8fb1bc05fe2d55372af1ff47d6fbf5208e03f45f2a424e4
+        HEAD_REF master
+)
+
+vcpkg_from_github(
+        OUT_SOURCE_PATH ASIO_GNUTLS_SOURCE_PATH
+        REPO paullouisageneau/boost-asio-gnutls
+        REF a57d4d36923c5fafa9698e14be16b8bc2913700a
+        SHA512 1e093dd4e999cce9c6d74f1d4c2d20f73512258b83505c307c7d53b8c7ed15626a8e90c8e6a6280827aafa069bc233c0c6f4c9276f1c332e4b141c7c350c47c0
+        HEAD_REF master
+)
+
+vcpkg_from_github(
+        OUT_SOURCE_PATH LIB_SIMULATOR_SOURCE_PATH
+        REPO arvidn/libsimulator
+        REF 39144efe83fcd38778cf76fc609e3475694642ca #2022-10-27
+        SHA512 a021f769d52d127355ecaceaf912bf3e86aaa256d4768d270fbe6066793b6159eddecd0262f3f2158602f883d49b3aac39eb79be5399212cdd7711f921ffa15a
+        HEAD_REF master
+)
+
+file(COPY ${TRYSIGNAL_SOURCE_PATH}/ DESTINATION ${SOURCE_PATH}/deps/try_signal)
+file(COPY ${ASIO_GNUTLS_SOURCE_PATH}/ DESTINATION ${SOURCE_PATH}/deps/asio-gnutls)
+file(COPY ${LIB_SIMULATOR_SOURCE_PATH}/ DESTINATION ${SOURCE_PATH}/simulation/libsimulator)
 
 vcpkg_configure_cmake(
     SOURCE_PATH ${SOURCE_PATH}
@@ -61,3 +88,7 @@ file(INSTALL ${SOURCE_PATH}/LICENSE DESTINATION ${CURRENT_PACKAGES_DIR}/share/${
 
 # Do not duplicate include files
 file(REMOVE_RECURSE ${CURRENT_PACKAGES_DIR}/debug/include ${CURRENT_PACKAGES_DIR}/debug/share ${CURRENT_PACKAGES_DIR}/share/cmake)
+
+if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
+    file(REMOVE_RECURSE "${CURRENT_PACKAGES_DIR}/bin" "${CURRENT_PACKAGES_DIR}/debug/bin")
+endif()
