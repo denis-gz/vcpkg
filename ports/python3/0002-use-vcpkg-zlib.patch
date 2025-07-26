@@ -13,7 +13,7 @@ diff --git a/PCbuild/pythoncore.vcxproj b/PCbuild/pythoncore.vcxproj
 index dbe236829a..5f30a35eb3 100644
 --- a/PCbuild/pythoncore.vcxproj
 +++ b/PCbuild/pythoncore.vcxproj
-@@ -507,8 +507,10 @@
+@@ -494,8 +494,10 @@
      <ClCompile Include="..\Python\thread.c" />
      <ClCompile Include="..\Python\traceback.c" />
    </ItemGroup>
@@ -25,8 +25,8 @@ index dbe236829a..5f30a35eb3 100644
      <ClCompile Include="$(zlibDir)\adler32.c" />
      <ClCompile Include="$(zlibDir)\compress.c" />
      <ClCompile Include="$(zlibDir)\crc32.c" />
-@@ -556,7 +558,7 @@
-   <Target Name="_WarnAboutToolset" BeforeTargets="PrepareForBuild" Condition="$(PlatformToolset) != 'v140' and $(PlatformToolset) != 'v141' and $(PlatformToolset) != 'v142'">
+@@ -547,7 +549,7 @@
+   <Target Name="_WarnAboutToolset" BeforeTargets="PrepareForBuild" Condition="$(PlatformToolset) != 'v140' and $(PlatformToolset) != 'v141' and $(PlatformToolset) != 'v142' and $(PlatformToolset) != 'v143'">
      <Warning Text="Toolset $(PlatformToolset) is not used for official builds. Your build may have errors or incompatibilities." />
    </Target>
 -  <Target Name="_WarnAboutZlib" BeforeTargets="PrepareForBuild" Condition="!$(IncludeExternals)">

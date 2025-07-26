@@ -5,8 +5,10 @@ endif()
 
 set(PYTHON_VERSION_MAJOR  3)
 set(PYTHON_VERSION_MINOR  10)
-set(PYTHON_VERSION_PATCH  2)
+set(PYTHON_VERSION_PATCH  18)
 set(PYTHON_VERSION        ${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.${PYTHON_VERSION_PATCH})
+
+set(VCPKG_LIBRARY_LINKAGE dynamic)
 
 set(PATCHES
     0002-use-vcpkg-zlib.patch
@@ -15,6 +17,7 @@ set(PATCHES
     0005-only-build-required-projects.patch
     0009-python.pc.patch
     0010-bz2d.patch
+    0011-pdbaltpath.patch
 )
 if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
     list(PREPEND PATCHES 0001-static-library.patch)
@@ -41,7 +44,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO python/cpython
     REF v${PYTHON_VERSION}
-    SHA512 14f0d1847d4361fa075adbe4dbf7339fb62be91d5419cf506abdf46b36dc5273564792d35e5a5e0608a8fa877a870152a593743c3b70a98c739d5bd028be9e18
+    SHA512 2b774be27cc8c163b72b663028374f17006aa3d63b8f2e98b7b548b83394c018ac2df1674477b374b70a7cf5ab5330b916a1d4c7a0505945c22fdeb63f6de9f2
     HEAD_REF master
     PATCHES ${PATCHES}
 )
@@ -197,7 +200,7 @@ if(VCPKG_TARGET_IS_WINDOWS OR VCPKG_TARGET_IS_UWP)
 
     vcpkg_fixup_pkgconfig()
 
-    vcpkg_clean_msbuild()
+    # vcpkg_clean_msbuild()
     
     # Remove static library belonging to executable
     if (VCPKG_LIBRARY_LINKAGE STREQUAL "static")
