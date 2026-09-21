@@ -1,0 +1,41 @@
+diff -ru a/PC/pyconfig.h b/PC/pyconfig.h
+--- a/PC/pyconfig.h	2025-07-25 00:20:12.082742700 +0300
++++ b/PC/pyconfig.h	2025-07-31 00:07:20.900673000 +0300
+@@ -268,11 +268,9 @@
+                         file in their Makefile (other compilers are
+                         generally taken care of by distutils.) */
+ #                       if defined(_DEBUG)
+-#                               pragma comment(lib,"python310_d.lib")
+-#                       elif defined(Py_LIMITED_API)
+-#                               pragma comment(lib,"python3.lib")
++#                               pragma comment(lib,"python3_d.lib")
+ #                       else
+-#                               pragma comment(lib,"python310.lib")
++#                               pragma comment(lib,"python3.lib")
+ #                       endif /* _DEBUG */
+ #               endif /* _MSC_VER */
+ #       endif /* Py_BUILD_CORE */
+diff -ru a/PCbuild/python3dll.vcxproj b/PCbuild/python3dll.vcxproj
+--- a/PCbuild/python3dll.vcxproj	2025-06-03 21:23:41.000000000 +0300
++++ b/PCbuild/python3dll.vcxproj	2025-07-30 23:55:02.809406100 +0300
+@@ -91,7 +91,7 @@
+   </PropertyGroup>
+   <ItemDefinitionGroup>
+     <ClCompile>
+-      <PreprocessorDefinitions>PYTHON_DLL_NAME="$(PyDllName)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
++      <PreprocessorDefinitions>PYTHON_DLL_NAME="$(Py3DllName)";%(PreprocessorDefinitions)</PreprocessorDefinitions>
+       <BufferSecurityCheck>false</BufferSecurityCheck>
+     </ClCompile>
+     <Link>
+diff -ru a/PCbuild/pythoncore.vcxproj b/PCbuild/pythoncore.vcxproj
+--- a/PCbuild/pythoncore.vcxproj	2025-07-25 00:20:11.923655700 +0300
++++ b/PCbuild/pythoncore.vcxproj	2025-07-30 23:55:02.809406100 +0300
+@@ -92,7 +92,7 @@
+   <PropertyGroup Label="UserMacros" />
+   <PropertyGroup>
+     <_ProjectFileVersion>10.0.30319.1</_ProjectFileVersion>
+-    <TargetName>$(PyDllName)</TargetName>
++    <TargetName>$(Py3DllName)</TargetName>
+   </PropertyGroup>
+   <PropertyGroup>
+     <CustomBuildBeforeTargets>Link</CustomBuildBeforeTargets>
