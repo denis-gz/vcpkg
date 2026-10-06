@@ -1,6 +1,6 @@
 {
   "name": "libtorrent",
-  "version": "2.0.11-ef64db35",
+  "version": "2.0.15-1eb18fae-p1",
   "maintainers": "Arvid Norberg <arvid.norberg@gmail.com>",
   "description": "An efficient feature complete C++ BitTorrent implementation",
   "homepage": "https://libtorrent.org",

@@ -1,0 +1,44 @@
+--- a/src/torrent.cpp
++++ b/src/torrent.cpp
+@@ -6412,11 +6412,16 @@
+ 	// true when a web seed's hostname should be forwarded to the proxy
+ 	// (via CONNECT for HTTP-type proxies, or SOCKS5's native domain-name
+ 	// addressing) rather than resolved locally
++	//
++	// web seeds are HTTP servers rather than BitTorrent peers, so they are
++	// proxied according to proxy_tracker_connections. This allows proxying
++	// web seeds while still connecting to peers directly (and accepting
++	// incoming peer connections) with proxy_peer_connections disabled
+ 	bool web_seed_hostname_via_proxy(aux::proxy_settings const& ps, std::string const& hostname)
+ 	{
+ 		return ps.proxy_hostnames
+ 			&& !aux::is_ip_address(hostname)
+-			&& ps.proxy_peer_connections
++			&& ps.proxy_tracker_connections
+ 			&& (ps.type == settings_pack::http
+ 				|| ps.type == settings_pack::http_pw
+ 				|| ps.type == settings_pack::socks5
+@@ -6554,10 +6559,11 @@
+ 			return;
+ 		}
+ 
++		// proxied as a tracker connection, see web_seed_hostname_via_proxy()
+ 		aux::proxy_settings const& ps = m_ses.proxy();
+ 		if ((ps.type == settings_pack::http
+ 			|| ps.type == settings_pack::http_pw)
+-			&& ps.proxy_peer_connections)
++			&& ps.proxy_tracker_connections)
+ 		{
+ #ifndef TORRENT_DISABLE_LOGGING
+ 			debug_log("resolving proxy for web seed: %s", web->url.c_str());
+@@ -6818,8 +6824,9 @@
+ 			if (!userdata) userdata = m_ses.ssl_ctx();
+ 		}
+ #endif
++		// proxied as a tracker connection, see web_seed_hostname_via_proxy()
+ 		aux::socket_type s = instantiate_connection(m_ses.get_context()
+-			, m_ses.proxy(), userdata, nullptr, true, false);
++			, m_ses.proxy(), userdata, nullptr, false, true);
+ 
+ 		if (auto* inner = boost::get<http_stream>(&s))
+ 		{
