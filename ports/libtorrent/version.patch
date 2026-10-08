@@ -5,7 +5,7 @@
  #define LIBTORRENT_VERSION_NUM ((LIBTORRENT_VERSION_MAJOR * 10000) + (LIBTORRENT_VERSION_MINOR * 100) + LIBTORRENT_VERSION_TINY)
  
 -#define LIBTORRENT_VERSION "2.0.15.0"
-+#define LIBTORRENT_VERSION "2.0.15.1"
++#define LIBTORRENT_VERSION "2.0.15.2"
  #define LIBTORRENT_REVISION "485467b33"
  
  namespace libtorrent {
@@ -14,7 +14,7 @@
  
  	// the libtorrent version in string form
 -	constexpr char const* version_str = "2.0.15.0";
-+	constexpr char const* version_str = "2.0.15.1";
++	constexpr char const* version_str = "2.0.15.2";
  
  	// the git commit of this libtorrent version
  	constexpr std::uint64_t version_revision = 0x485467b33;
@@ -25,7 +25,7 @@
  		SET(proxy_password, "", &session_impl::update_proxy),
  		SET(i2p_hostname, "", &session_impl::update_i2p_bridge),
 -		SET(peer_fingerprint, "-LT20F0-", nullptr),
-+		SET(peer_fingerprint, "-LT20F1-", nullptr),
++		SET(peer_fingerprint, "-LT20F2-", nullptr),
  		SET(dht_bootstrap_nodes, "dht.libtorrent.org:25401", &session_impl::update_dht_bootstrap_nodes),
  		SET(natpmp_gateway, "", nullptr)
  	}});

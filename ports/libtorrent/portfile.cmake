@@ -37,6 +37,7 @@ vcpkg_from_github(
     PATCHES
 		windows.patch
 		web-seed-proxy.patch
+		oversized-files.patch
 		version.patch
 )
 

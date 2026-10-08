@@ -1,0 +1,353 @@
+--- a/include/libtorrent/truncate.hpp
++++ b/include/libtorrent/truncate.hpp
+@@ -35,6 +35,7 @@
+ 
+ #include "libtorrent/fwd.hpp"
+ #include "libtorrent/error_code.hpp"
++#include "libtorrent/units.hpp"
+ #include <string>
+ 
+ namespace libtorrent {
+@@ -43,6 +44,15 @@
+ // the specified save_path.
+ TORRENT_EXPORT void truncate_files(file_storage const& fs, std::string const& save_path, storage_error& ec);
+ 
++namespace aux {
++
++	// Truncates the file to the size specified in the file_storage, if it's larger. A file that doesn't exist
++	// is not an error.
++	TORRENT_EXTRA_EXPORT void truncate_file(file_storage const& fs, file_index_t file, std::string const& save_path
++		, storage_error& ec);
++
++}
++
+ }
+ 
+ #endif
+--- a/include/libtorrent/aux_/storage_utils.hpp
++++ b/include/libtorrent/aux_/storage_utils.hpp
+@@ -105,6 +105,13 @@
+ 
+ 	TORRENT_EXTRA_EXPORT int hash_zeroes(hasher& ph, std::int64_t size);
+ 
++	// Truncates a file larger than specified in the file_storage, e.g. left by another torrent saved to the same
++	// location. Such a file would keep its stale data beyond the expected size, which no piece covers, so it would
++	// pass the hash checks while still differing from the original. On Windows a memory-mapped file can't be
++	// truncated, so this has to happen before the storage opens it. Returns false if the file couldn't be truncated.
++	TORRENT_EXTRA_EXPORT bool truncate_oversized_file(file_storage const& fs, file_index_t file
++		, std::string const& save_path, stat_cache& sc);
++
+ 	TORRENT_EXTRA_EXPORT void initialize_storage(
+ 		file_storage const& fs
+ 		, std::string const& save_path
+--- a/src/truncate.cpp
++++ b/src/truncate.cpp
+@@ -43,140 +43,144 @@
+ 
+ namespace libtorrent {
+ 
+-#ifdef TORRENT_WINDOWS
+-
+ void truncate_files(file_storage const& fs, std::string const& save_path, storage_error& ec)
+ {
+ 	for (auto i : fs.file_range())
+ 	{
+ 		if (fs.pad_file_at(i)) continue;
+-		auto const fn = fs.file_path(i, save_path);
+-		native_path_string const file_path = convert_to_native_path_string(fn);
++		aux::truncate_file(fs, i, save_path, ec);
++		if (ec) return;
++	}
++}
++
++namespace aux {
++
++#ifdef TORRENT_WINDOWS
++
++void truncate_file(file_storage const& fs, file_index_t const i, std::string const& save_path, storage_error& ec)
++{
++	auto const fn = fs.file_path(i, save_path);
++	native_path_string const file_path = convert_to_native_path_string(fn);
+ #ifdef TORRENT_WINRT
+-		HANDLE handle = CreateFile2(file_path.c_str()
+-			, GENERIC_WRITE | GENERIC_READ
+-			, FILE_SHARE_READ | FILE_SHARE_WRITE
+-			, OPEN_EXISTING
+-			, nullptr);
++	HANDLE handle = CreateFile2(file_path.c_str()
++		, GENERIC_WRITE | GENERIC_READ
++		, FILE_SHARE_READ | FILE_SHARE_WRITE
++		, OPEN_EXISTING
++		, nullptr);
+ #else
+-		HANDLE handle = CreateFileW(file_path.c_str()
+-			, GENERIC_WRITE | GENERIC_READ
+-			, FILE_SHARE_READ | FILE_SHARE_WRITE
+-			, nullptr
+-			, OPEN_EXISTING
+-			, 0
+-			, nullptr);
++	HANDLE handle = CreateFileW(file_path.c_str()
++		, GENERIC_WRITE | GENERIC_READ
++		, FILE_SHARE_READ | FILE_SHARE_WRITE
++		, nullptr
++		, OPEN_EXISTING
++		, 0
++		, nullptr);
+ #endif
+-		if (handle == INVALID_HANDLE_VALUE)
+-		{
+-			auto const error = ::GetLastError();
+-			if (error != ERROR_FILE_NOT_FOUND)
+-			{
+-				ec.ec.assign(error, system_category());
+-				ec.file(i);
+-				ec.operation = operation_t::file_open;
+-				return;
+-			}
+-			continue;
+-		}
+-
+-		LARGE_INTEGER file_size;
+-		if (GetFileSizeEx(handle, &file_size) == FALSE)
++	if (handle == INVALID_HANDLE_VALUE)
++	{
++		auto const error = ::GetLastError();
++		if (error != ERROR_FILE_NOT_FOUND)
+ 		{
+-			ec.ec.assign(::GetLastError(), system_category());
++			ec.ec.assign(error, system_category());
+ 			ec.file(i);
+-			ec.operation = operation_t::file_stat;
+-			::CloseHandle(handle);
+-			return;
++			ec.operation = operation_t::file_open;
+ 		}
++		return;
++	}
+ 
+-		if (file_size.QuadPart < fs.file_size(i))
+-		{
+-			::CloseHandle(handle);
+-			continue;
+-		}
++	LARGE_INTEGER file_size;
++	if (GetFileSizeEx(handle, &file_size) == FALSE)
++	{
++		ec.ec.assign(::GetLastError(), system_category());
++		ec.file(i);
++		ec.operation = operation_t::file_stat;
++		::CloseHandle(handle);
++		return;
++	}
+ 
+-		LARGE_INTEGER sz;
+-		sz.QuadPart = fs.file_size(i);
+-		if (SetFilePointerEx(handle, sz, nullptr, FILE_BEGIN) == FALSE)
+-		{
+-			ec.ec.assign(::GetLastError(), system_category());
+-			ec.file(i);
+-			ec.operation = operation_t::file_seek;
+-			::CloseHandle(handle);
+-			return;
+-		}
++	if (file_size.QuadPart < fs.file_size(i))
++	{
++		::CloseHandle(handle);
++		return;
++	}
+ 
+-		if (::SetEndOfFile(handle) == FALSE)
+-		{
+-			ec.ec.assign(::GetLastError(), system_category());
+-			ec.file(i);
+-			ec.operation = operation_t::file_truncate;
+-			::CloseHandle(handle);
+-			return;
+-		}
++	LARGE_INTEGER sz;
++	sz.QuadPart = fs.file_size(i);
++	if (SetFilePointerEx(handle, sz, nullptr, FILE_BEGIN) == FALSE)
++	{
++		ec.ec.assign(::GetLastError(), system_category());
++		ec.file(i);
++		ec.operation = operation_t::file_seek;
+ 		::CloseHandle(handle);
++		return;
+ 	}
++
++	if (::SetEndOfFile(handle) == FALSE)
++	{
++		ec.ec.assign(::GetLastError(), system_category());
++		ec.file(i);
++		ec.operation = operation_t::file_truncate;
++		::CloseHandle(handle);
++		return;
++	}
++	::CloseHandle(handle);
+ }
+ 
+ #else
+ 
+-void truncate_files(file_storage const& fs, std::string const& save_path, storage_error& ec)
++void truncate_file(file_storage const& fs, file_index_t const i, std::string const& save_path, storage_error& ec)
+ {
+-	for (auto i : fs.file_range())
+-	{
+-		if (fs.pad_file_at(i)) continue;
+-		auto const fn = fs.file_path(i, save_path);
+-		native_path_string const file_path = convert_to_native_path_string(fn);
++	auto const fn = fs.file_path(i, save_path);
++	native_path_string const file_path = convert_to_native_path_string(fn);
+ 
+-		int flags = O_RDWR;
++	int flags = O_RDWR;
+ #ifdef O_CLOEXEC
+-		flags |= O_CLOEXEC;
++	flags |= O_CLOEXEC;
+ #endif
+-		int const fd = ::open(file_path.c_str(), flags);
++	int const fd = ::open(file_path.c_str(), flags);
+ 
+-		if (fd < 0)
+-		{
+-			int const error = errno;
+-			if (error != ENOENT)
+-			{
+-				ec.ec.assign(error, generic_category());
+-				ec.file(i);
+-				ec.operation = operation_t::file_open;
+-				return;
+-			}
+-			continue;
+-		}
+-
+-		struct ::stat st;
+-		if (::fstat(fd, &st) != 0)
++	if (fd < 0)
++	{
++		int const error = errno;
++		if (error != ENOENT)
+ 		{
+-			ec.ec.assign(errno, system_category());
++			ec.ec.assign(error, generic_category());
+ 			ec.file(i);
+-			ec.operation = operation_t::file_stat;
+-			::close(fd);
+-			return;
++			ec.operation = operation_t::file_open;
+ 		}
++		return;
++	}
+ 
+-		if (st.st_size < fs.file_size(i))
+-		{
+-			::close(fd);
+-			continue;
+-		}
++	struct ::stat st;
++	if (::fstat(fd, &st) != 0)
++	{
++		ec.ec.assign(errno, system_category());
++		ec.file(i);
++		ec.operation = operation_t::file_stat;
++		::close(fd);
++		return;
++	}
+ 
+-		if (::ftruncate(fd, static_cast<off_t>(fs.file_size(i))) < 0)
+-		{
+-			ec.ec.assign(errno, system_category());
+-			ec.file(i);
+-			ec.operation = operation_t::file_truncate;
+-			::close(fd);
+-			return;
+-		}
++	if (st.st_size < fs.file_size(i))
++	{
++		::close(fd);
++		return;
++	}
+ 
++	if (::ftruncate(fd, static_cast<off_t>(fs.file_size(i))) < 0)
++	{
++		ec.ec.assign(errno, system_category());
++		ec.file(i);
++		ec.operation = operation_t::file_truncate;
+ 		::close(fd);
++		return;
+ 	}
++
++	::close(fd);
+ }
+ 
+ #endif
+ 
++} // namespace aux
++
+ }
+--- a/src/storage_utils.cpp
++++ b/src/storage_utils.cpp
+@@ -46,6 +46,7 @@
+ #include "libtorrent/error_code.hpp"
+ #include "libtorrent/string_view.hpp"
+ #include "libtorrent/hasher.hpp"
++#include "libtorrent/truncate.hpp"
+ 
+ #if TORRENT_HAS_SYMLINK
+ #include <unistd.h> // for symlink()
+@@ -624,6 +625,16 @@
+ 		return int(size);
+ 	}
+ 
++	bool truncate_oversized_file(file_storage const& fs, file_index_t const file
++		, std::string const& save_path, stat_cache& sc)
++	{
++		storage_error ec;
++		truncate_file(fs, file, save_path, ec);
++		// the cached size is stale either way
++		sc.set_dirty(file);
++		return !ec;
++	}
++
+ 	void initialize_storage(file_storage const& fs
+ 		, std::string const& save_path
+ 		, stat_cache& sc
+@@ -661,8 +672,10 @@
+ 			auto const fs_file_size = fs.file_size(file_index);
+ 			if (!err && sz > fs_file_size)
+ 			{
+-				// this file is oversized, alert the client
+-				oversized_file(file_index, sz);
++				// this file is oversized. Truncate it now, before the storage opens it, and alert the client only
++				// if that fails
++				if (!truncate_oversized_file(fs, file_index, save_path, sc))
++					oversized_file(file_index, sz);
+ 			}
+ 
+ 			// if the file is empty and doesn't already exist, create it
+--- a/src/mmap_storage.cpp
++++ b/src/mmap_storage.cpp
+@@ -349,7 +349,8 @@
+ 			if (!err && size > 0)
+ 			{
+ 				use_partfile(i, false);
+-				if (size > fs.file_size(i))
++				// see aux::truncate_oversized_file()
++				if (size > fs.file_size(i) && !aux::truncate_oversized_file(fs, i, m_save_path, m_stat_cache))
+ 					ret = ret | status_t::oversized_file;
+ 			}
+ 			else
+--- a/src/posix_storage.cpp
++++ b/src/posix_storage.cpp
+@@ -415,7 +415,9 @@
+ 			error_code err;
+ 			stat_file(file_path, &s, err);
+ 
+-			if (s.file_size > fs.file_size(i))
++			// see aux::truncate_oversized_file()
++			if (!err && s.file_size > fs.file_size(i)
++				&& !aux::truncate_oversized_file(fs, i, m_save_path, m_stat_cache))
+ 				ret = ret | status_t::oversized_file;
+ 
+ 			if (!err)
