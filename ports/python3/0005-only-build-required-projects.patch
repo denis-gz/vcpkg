@@ -1,16 +1,5 @@
-From 6492277e39dbe7dd77d32fdc9ae4b989213ef3c6 Mon Sep 17 00:00:00 2001
-From: Adam Johnson <AdamJohnso@gmail.com>
-Date: Wed, 9 Sep 2020 20:15:58 -0400
-Subject: [PATCH 5/6] only build required projects
-
-strips out tests and unsupported externals (eg tkinter).
----
- PCbuild/_ssl.vcxproj |  2 +-
- PCbuild/pcbuild.proj | 14 +++++++-------
- 2 files changed, 8 insertions(+), 8 deletions(-)
-
 diff --git a/PCbuild/_ssl.vcxproj b/PCbuild/_ssl.vcxproj
-index 4dffa202b7..e661cb6fb6 100644
+index 4dffa20..e661cb6 100644
 --- a/PCbuild/_ssl.vcxproj
 +++ b/PCbuild/_ssl.vcxproj
 @@ -111,7 +111,7 @@
@@ -23,10 +12,10 @@ index 4dffa202b7..e661cb6fb6 100644
        <ReferenceOutputAssembly>false</ReferenceOutputAssembly>
      </ProjectReference>
 diff --git a/PCbuild/pcbuild.proj b/PCbuild/pcbuild.proj
-index 4d416c589e..ede9868a8f 100644
+index 222821a..5bcfdb8 100644
 --- a/PCbuild/pcbuild.proj
 +++ b/PCbuild/pcbuild.proj
-@@ -45,21 +45,21 @@
+@@ -58,21 +58,21 @@
        <BuildInParallel>false</BuildInParallel>
      </Projects>
      <!-- python3.dll -->
@@ -52,9 +41,6 @@ index 4d416c589e..ede9868a8f 100644
 +    <!-- _ssl will NOT build _socket as well -->
 +    <ExtensionModules Include="_socket" Condition="true" />
 +    <ExternalModules Include="_ssl;_hashlib" Condition="true" />
-     <ExternalModules Include="_tkinter" Condition="$(IncludeTkinter) and $(Platform) != 'ARM' and $(Platform) != 'ARM64'" />
+     <ExternalModules Include="_tkinter" Condition="$(IncludeTkinter)" />
      <ExtensionModules Include="@(ExternalModules->'%(Identity)')" Condition="$(IncludeExternals)" />
      <Projects Include="@(ExtensionModules->'%(Identity).vcxproj')" Condition="$(IncludeExtensions)" />
--- 
-2.28.0.windows.1
-

@@ -1,0 +1,65 @@
+diff --git a/Modules/_ssl.c b/Modules/_ssl.c
+index 8b5cb38..fe69fa7 100644
+--- a/Modules/_ssl.c
++++ b/Modules/_ssl.c
+@@ -4209,17 +4209,29 @@ _ssl__SSLContext_load_dh_params(PySSLContext *self, PyObject *filepath)
+ /*[clinic end generated code: output=1c8e57a38e055af0 input=c8871f3c796ae1d6]*/
+ {
+     FILE *f;
++    BIO *bio;
++    PyObject *path_bytes;
+     DH *dh;
+ 
++    /* _Py_fopen_obj() validates the path, raises the audit event and the
++       OSError as before. The file itself is then read by OpenSSL: a FILE*
++       opened here would go through OPENSSL_Uplink, which aborts unless the
++       host executable exports OPENSSL_Applink. */
+     f = _Py_fopen_obj(filepath, "rb");
+     if (f == NULL)
+         return NULL;
++    fclose(f);
++
++    if (!PyUnicode_FSConverter(filepath, &path_bytes))
++        return NULL;
+ 
+     errno = 0;
+     PySSL_BEGIN_ALLOW_THREADS
+-    dh = PEM_read_DHparams(f, NULL, NULL, NULL);
+-    fclose(f);
++    bio = BIO_new_file(PyBytes_AS_STRING(path_bytes), "rb");
++    dh = bio ? PEM_read_bio_DHparams(bio, NULL, NULL, NULL) : NULL;
++    BIO_free(bio);
+     PySSL_END_ALLOW_THREADS
++    Py_DECREF(path_bytes);
+     if (dh == NULL) {
+         if (errno != 0) {
+             PyErr_SetFromErrnoWithFilenameObject(PyExc_OSError, filepath);
+diff --git a/Modules/_ssl/debughelpers.c b/Modules/_ssl/debughelpers.c
+index 03c125e..6c5aa6b 100644
+--- a/Modules/_ssl/debughelpers.c
++++ b/Modules/_ssl/debughelpers.c
+@@ -176,6 +176,7 @@ _PySSLContext_get_keylog_filename(PySSLContext *self, void *c) {
+ static int
+ _PySSLContext_set_keylog_filename(PySSLContext *self, PyObject *arg, void *c) {
+     FILE *fp;
++    PyObject *path_bytes;
+     /* Reset variables and callback first */
+     SSL_CTX_set_keylog_callback(self->ctx, NULL);
+     Py_CLEAR(self->keylog_filename);
+@@ -196,8 +197,15 @@ _PySSLContext_set_keylog_filename(PySSLContext *self, PyObject *arg, void *c) {
+     fp = _Py_fopen_obj(arg, "a" PY_STDIOTEXTMODE);
+     if (fp == NULL)
+         return -1;
++    fclose(fp);
+ 
+-    self->keylog_bio = BIO_new_fp(fp, BIO_CLOSE | BIO_FP_TEXT);
++    /* Let OpenSSL open the file itself: a FILE* opened here would go through
++       OPENSSL_Uplink, which aborts unless the host executable exports
++       OPENSSL_Applink. */
++    if (!PyUnicode_FSConverter(arg, &path_bytes))
++        return -1;
++    self->keylog_bio = BIO_new_file(PyBytes_AS_STRING(path_bytes), "a");
++    Py_DECREF(path_bytes);
+     if (self->keylog_bio == NULL) {
+         PyErr_SetString(get_state_ctx(self)->PySSLErrorObject,
+                         "Can't malloc memory for keylog file");

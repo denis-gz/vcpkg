@@ -4,8 +4,8 @@ if (VCPKG_LIBRARY_LINKAGE STREQUAL dynamic AND VCPKG_CRT_LINKAGE STREQUAL static
 endif()
 
 set(PYTHON_VERSION_MAJOR  3)
-set(PYTHON_VERSION_MINOR  10)
-set(PYTHON_VERSION_PATCH  21)
+set(PYTHON_VERSION_MINOR  11)
+set(PYTHON_VERSION_PATCH  17)
 set(PYTHON_VERSION        ${PYTHON_VERSION_MAJOR}.${PYTHON_VERSION_MINOR}.${PYTHON_VERSION_PATCH})
 
 set(VCPKG_LIBRARY_LINKAGE dynamic)
@@ -16,21 +16,19 @@ set(PATCHES
     0004-dont-copy-vcruntime.patch
     0005-only-build-required-projects.patch
     0009-python.pc.patch
-    0010-bz2d.patch
     0011-pdbaltpath.patch
     0012-dllname.patch
+    0013-fix-freeze-module-platform.patch
+    0014-ssl-dont-pass-file-pointers-to-openssl.patch
 )
 if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
     list(PREPEND PATCHES 0001-static-library.patch)
 endif()
 
-# Python 3.9 removed support for Windows 7. This patch re-adds support for Windows 7 and is therefore
-# required to build this port on Windows 7 itself due to Python using itself in its own build system.
-if("deprecated-win7-support" IN_LIST FEATURES)
+# Python 3.9 removed support for Windows 7. The ITSM Agent still supports it, so the Windows build
+# always restores it: Win7 API level and runtime lookup of the PathCch* functions instead of pathcch.lib.
+if(VCPKG_TARGET_IS_WINDOWS)
     list(APPEND PATCHES 0006-restore-support-for-windows-7.patch)
-    message(WARNING "Windows 7 support is deprecated and may be removed at any time.")
-elseif(VCPKG_TARGET_IS_WINDOWS AND CMAKE_SYSTEM_VERSION EQUAL 6.1)
-    message(FATAL_ERROR "python3 requires the feature deprecated-win7-support when building on Windows 7.")
 endif()
 
 # The Windows 11 SDK has a problem that causes it to error on the resource files, so we patch that.
@@ -45,7 +43,7 @@ vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO python/cpython
     REF v${PYTHON_VERSION}
-    SHA512 04521d7eb77d7b358227912e6d43dfdf5aa7b158f68b5917f6bc10e49996fd17bbfbc484790fc75af4788dc2dc3cd55a9e1d88f72143fe1b4aeb66aebd01753f
+    SHA512 a20afb0ade85f9b5b3722e2b94bf4534b753a941ece4fb73e5dd8f5732cd7c19c2edaf3b69624d6e937ef3b9056784374ddf02d78e0b6131131300c36b1bc8ad
     HEAD_REF master
     PATCHES ${PATCHES}
 )
@@ -141,6 +139,11 @@ if(VCPKG_TARGET_IS_WINDOWS OR VCPKG_TARGET_IS_UWP)
         vcpkg_add_to_path("${CURRENT_INSTALLED_DIR}/debug/bin")
     endif()
 
+    # Since 3.11 the build runs deepfreeze/regen scripts, which need an existing interpreter (3.10+ is enough)
+    vcpkg_find_acquire_program(PYTHON3)
+    get_filename_component(PYTHON3_DIR "${PYTHON3}" DIRECTORY)
+    set(ENV{PythonForBuild} "${PYTHON3_DIR}/python.exe")
+
     vcpkg_install_msbuild(
         SOURCE_PATH "${SOURCE_PATH}"
         PROJECT_SUBPATH "PCbuild/pcbuild.proj"
@@ -152,7 +155,8 @@ if(VCPKG_TARGET_IS_WINDOWS OR VCPKG_TARGET_IS_UWP)
 
     # The extension modules must be placed in the DLLs directory, so we can't use vcpkg_copy_tools()
     if(PYTHON_ALLOW_EXTENSIONS)
-        file(GLOB_RECURSE PYTHON_EXTENSIONS "${CURRENT_BUILDTREES_DIR}/*.pyd")
+        # Only this triplet's release build: buildtrees holds the build folders of every triplet
+        file(GLOB_RECURSE PYTHON_EXTENSIONS "${CURRENT_BUILDTREES_DIR}/${TARGET_TRIPLET}-rel/*.pyd")
         list(FILTER PYTHON_EXTENSIONS EXCLUDE REGEX [[.*_d\.pyd]])
         file(COPY ${PYTHON_EXTENSIONS} DESTINATION "${CURRENT_PACKAGES_DIR}/tools/${PORT}/DLLs")
         vcpkg_copy_tool_dependencies("${CURRENT_PACKAGES_DIR}/tools/${PORT}/DLLs")
