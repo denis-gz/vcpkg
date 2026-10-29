@@ -9,6 +9,8 @@ set(PKGCONFIG_LIBS_PRIVATE "")
 set(PKGCONFIG_REQUIRES_PRIVATE "")
 
 add_library(sqlite3 sqlite3.c sqlite3.rc)
+# itarian: the debug DLL gets a 'd' suffix, so both configurations can be deployed into one folder (as Qt does)
+set_target_properties(sqlite3 PROPERTIES DEBUG_POSTFIX d)
 
 target_include_directories(sqlite3 PUBLIC $<BUILD_INTERFACE:${CMAKE_CURRENT_LIST_DIR}> $<INSTALL_INTERFACE:include>)
 

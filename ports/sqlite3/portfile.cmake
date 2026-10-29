@@ -101,6 +101,9 @@ if(VCPKG_LIBRARY_LINKAGE STREQUAL "static")
     configure_file("${CURRENT_PORT_DIR}/vcpkg-cmake-wrapper.cmake" "${CURRENT_PACKAGES_DIR}/share/${PORT}/vcpkg-cmake-wrapper.cmake" @ONLY)
 endif()
 
+if(NOT DEFINED VCPKG_BUILD_TYPE)
+    vcpkg_replace_string("${CURRENT_PACKAGES_DIR}/debug/lib/pkgconfig/sqlite3.pc" "-lsqlite3" "-lsqlite3d")
+endif()
 vcpkg_fixup_pkgconfig()
 vcpkg_copy_pdbs()
 
