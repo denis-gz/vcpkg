@@ -1,4 +1,8 @@
 # When this port is updated, the minizip port should be updated at the same time
+
+# itarian: one zlib1.dll is deployed by ITSM Agent for all of its binaries
+vcpkg_check_linkage(ONLY_DYNAMIC_LIBRARY)
+
 vcpkg_from_github(
     OUT_SOURCE_PATH SOURCE_PATH
     REPO madler/zlib
