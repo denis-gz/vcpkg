@@ -77,8 +77,8 @@ diff --git a/PCbuild/_ssl.vcxproj b/PCbuild/_ssl.vcxproj
 index 4907f49b66..4dffa202b7 100644
 --- a/PCbuild/_ssl.vcxproj
 +++ b/PCbuild/_ssl.vcxproj
-@@ -99,7 +99,7 @@
-   </ItemDefinitionGroup>
+@@ -102,7 +102,7 @@
+   </ItemGroup>
    <ItemGroup>
      <ClCompile Include="..\Modules\_ssl.c" />
 -    <ClCompile Include="$(opensslIncludeDir)\applink.c">
