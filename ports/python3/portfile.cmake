@@ -29,6 +29,8 @@ endif()
 # always restores it: Win7 API level and runtime lookup of the PathCch* functions instead of pathcch.lib.
 if(VCPKG_TARGET_IS_WINDOWS)
     list(APPEND PATCHES 0006-restore-support-for-windows-7.patch)
+    # Fixes the PathSkipRootW fallback added by 0006, which left the HRESULT unset on success
+    list(APPEND PATCHES 0015-fix-uninitialized-hresult-in-win7-splitroot.patch)
 endif()
 
 # The Windows 11 SDK has a problem that causes it to error on the resource files, so we patch that.

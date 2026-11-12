@@ -1,0 +1,15 @@
+diff --git a/Modules/posixmodule.c b/Modules/posixmodule.c
+index 6de677b..478c9a3 100644
+--- a/Modules/posixmodule.c
++++ b/Modules/posixmodule.c
+@@ -4558,9 +4558,7 @@ os__path_splitroot_impl(PyObject *module, path_t *path)
+         ret = _PathCchSkipRoot(buffer, &end);
+     } else {
+         end = PathSkipRootW(buffer);
+-        if (!end) {
+-            ret = E_FAIL;
+-        }
++        ret = end ? S_OK : E_FAIL;
+     }
+     Py_END_ALLOW_THREADS
+     if (FAILED(ret)) {
